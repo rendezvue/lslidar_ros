@@ -24,7 +24,7 @@
     <param name="distance_unit" value="0.40"/>
     <param name="angle_disable_min" value="0"/>
     <param name="angle_disable_max" value="0"/>
-    <param name="horizontal_angle_resolution" value="0.2"/>  <!--10Hz:0.2  20Hz:0.4 5Hz: 0.1  -->
+    <param name="horizontal_angle_resolution" value="0.18"/>  <!--10Hz:0.18  20Hz:0.36 5Hz: 0.09  -->
     <param name="scan_num" value="4"/>
     <param name="read_once" value="false"/>
     <param name="publish_scan" value="true"/>

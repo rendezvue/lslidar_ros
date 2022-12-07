@@ -37,18 +37,7 @@ namespace lslidar_driver {
 
     void DriverNodelet::onInit() {
         // start the driver
-        if (lidar_type == "c16") {
-            dvr_.reset(new lslidarC16Driver(getNodeHandle(), getPrivateNodeHandle()));
-        }else if(lidar_type == "c8"){
-            dvr_.reset(new lslidarC8Driver(getNodeHandle(),getPrivateNodeHandle()));
-        }
-        else if(lidar_type == "c32"){
-            dvr_.reset(new lslidarC32Driver(getNodeHandle(), getPrivateNodeHandle()));
-        }else {
-            dvr_.reset(new lslidarC1Driver(getNodeHandle(), getPrivateNodeHandle()));
-        }
-
-
+        dvr_.reset(new lslidarDriver(getNodeHandle(), getPrivateNodeHandle()));
         // spawn device poll thread
         running_ = true;
         deviceThread_ = boost::shared_ptr<boost::thread>(

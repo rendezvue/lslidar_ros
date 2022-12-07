@@ -109,7 +109,7 @@ int InputSocket::getPacket(lslidar_msgs::LslidarPacketPtr &pkt)
   fds[0].events = POLLIN;
   static const int POLL_TIMEOUT = 3000;  // one second (in msec)
 
-  sockaddr_in sender_address;
+  sockaddr_in sender_address{};
   socklen_t sender_address_len = sizeof(sender_address);
   while (flag == 1)
  // while (true)
@@ -133,7 +133,6 @@ int InputSocket::getPacket(lslidar_msgs::LslidarPacketPtr &pkt)
         char bufTime[72] = {0};
         sprintf(bufTime,"%d-%d-%d %d:%d:%d", curTm->tm_year+1900, curTm->tm_mon+1,
                 curTm->tm_mday, curTm->tm_hour, curTm->tm_min, curTm->tm_sec);
-
         ROS_WARN_THROTTLE(2, "%s  lslidar poll() timeout, port:%d", bufTime,port_);
         /*
         char buffer_data[8] = "re-con";
@@ -183,6 +182,8 @@ int InputSocket::getPacket(lslidar_msgs::LslidarPacketPtr &pkt)
 
   return 0;
 }
+
+
 
 ////////////////////////////////////////////////////////////////////////
 // InputPCAP class implementation

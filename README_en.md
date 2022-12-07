@@ -1,8 +1,8 @@
-# LSLIDAR_CX_V4.2.1_221123_ROS
+# LSLIDAR_CX_V4.2.1_221207_ROS
 
 ## 1.Introduction
 
-​		LSLIDAR_CX_V4.2.1_221123_ROS is the lidar ros driver in linux environment, which is suitable for C1,C8,C16 and C32(32 degrees,70 degrees,90 degrees)  lidar. The program has  tested under ubuntu 20.04 ros noetic and ubuntu18.04 ros melodic.
+​		LSLIDAR_CX_V4.2.1_221207_ROS is the lidar ros driver in linux environment, which is suitable for C1,C8,C16 and C32(32 degrees,70 degrees,90 degrees)  lidar. The program has  tested under ubuntu 20.04 ros noetic and ubuntu18.04 ros melodic.
 
 ## 2.Dependencies
 
@@ -196,8 +196,12 @@ Date    : 2022-10-28
 
 -------------------
 
-Original version : LSLIDAR_CX_V4.2.1_221123_ROS
+Original version : LSLIDAR_CX_V4.2.1_221207_ROS
 
-Modify:  1. scan topic add intensity information
+Modify: 1. Scan topic adds strength information
 
-Date    : 2022-11-23
+2. fpga upgrade, C32 90 degree modification of calculation formula
+
+3. ROS driver adds the function of modifying time service mode
+
+Date    : 2022-12-07

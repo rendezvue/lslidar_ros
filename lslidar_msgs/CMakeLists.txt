@@ -22,6 +22,7 @@ add_message_files(
 add_service_files(
   FILES
   lslidar_control.srv
+  time_service.srv
 )
 
 

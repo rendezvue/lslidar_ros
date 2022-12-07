@@ -21,6 +21,8 @@
 #define DEG_TO_RAD 0.017453293
 #define RAD_TO_DEG 57.29577951
 
+class Request;
+
 #include "input.h"
 #include <string>
 #include <ros/ros.h>
@@ -41,6 +43,7 @@
 #include <lslidar_msgs/LslidarScanUnified.h>
 #include <lslidar_msgs/LslidarPacket.h>
 #include <lslidar_msgs/lslidar_control.h>
+#include <lslidar_msgs/time_service.h>
 #include <memory>
 #include <mutex>
 
@@ -75,7 +78,10 @@ namespace lslidar_driver {
     static const int FIRINGS_PER_PACKET_C32 = BLOCKS_PER_PACKET; //12
     static const int SCANS_PER_PACKET = SCANS_PER_FIRING * FIRINGS_PER_BLOCK * BLOCKS_PER_PACKET; //384
     //unit:meter
-    static const double R1_ = 0.0361;
+    static const double R1_ = 0.0361;     //
+    static const double R1_90 = 0.0209;   // 90度
+    static const double conversionAngle_ = 20.25;
+    static const double conversionAngle_90 = 27.76; // 90度
 // Pre-compute the sine and cosine for the altitude angles.
     //c32 32度
     static const double c32_vertical_angle[32] = {-16, -8, 0, 8, -15, -7, 1, 9, -14, -6, 2, 10, -13, -5, 3, 11, -12,
@@ -173,7 +179,7 @@ namespace lslidar_driver {
     public:
         lslidarDriver(ros::NodeHandle &node, ros::NodeHandle &private_nh);
 
-        virtual ~lslidarDriver() {}
+        ~lslidarDriver() {}
 
         bool checkPacketValidity(const RawPacket *packet);
 
@@ -195,6 +201,9 @@ namespace lslidar_driver {
         bool lslidarC16Control(lslidar_msgs::lslidar_control::Request &req,
                                lslidar_msgs::lslidar_control::Response &res);
 
+        bool timeService(lslidar_msgs::time_service::Request &req,
+                               lslidar_msgs::time_service::Response &res);
+
         bool SendPacketTolidar(bool power_switch);
 
         void decodePacket(const RawPacket *packet);
@@ -202,7 +211,8 @@ namespace lslidar_driver {
         bool poll();
 
         void pointcloudToLaserscan(const sensor_msgs::PointCloud2& cloud_msg,sensor_msgs::LaserScan &output_scan);
-        virtual bool initialize() = 0;
+
+        bool initialize();
 
     public:
         int msop_udp_port;
@@ -250,7 +260,8 @@ namespace lslidar_driver {
         //ros::Publisher packet_pub;
         ros::Publisher pointcloud_pub;
         ros::Publisher scan_pub;
-        ros::ServiceServer lslidar_control;
+//        ros::ServiceServer lslidar_control;
+        ros::ServiceServer time_service_;
 
         unsigned char difop_data[1206];
         unsigned char packetTimeStamp[10];
@@ -266,95 +277,7 @@ namespace lslidar_driver {
         double cos_scan_altitude[32] = {0};
         double sin_scan_altitude[32] = {0};
         double horizontal_angle_resolution;
-        int lidar_nuber_ ;
-    };
-
-
-    class lslidarC16Driver : public lslidarDriver {
-    public:
-        /**
-       * @brief lslidarDriver
-       * @param node          raw packet output topic
-       * @param private_nh    通过这个节点传参数
-       */
-        lslidarC16Driver(ros::NodeHandle &node, ros::NodeHandle &private_nh);
-
-        virtual ~lslidarC16Driver();
-
-//        bool poll(void);
-
-        virtual bool initialize();
-
-    private:
-
-//        double scan_altitude[16];
-//        double cos_scan_altitude[16];
-//        double sin_scan_altitude[16];
-
-//        FiringC16 firings;
-    };
-
-    class lslidarC32Driver : public lslidarDriver {
-    public:
-        /**
-       * @brief lslidarDriver
-       * @param node          raw packet output topic
-       * @param private_nh    通过这个节点传参数
-       */
-        lslidarC32Driver(ros::NodeHandle &node, ros::NodeHandle &private_nh);
-
-        virtual ~lslidarC32Driver();
-
-//        bool poll(void);
-
-        virtual bool initialize();
-
-    private:
-
-//        double scan_altitude[32];
-//        double cos_scan_altitude[32];
-//        double sin_scan_altitude[32];
-
-//        FiringC32 firings;
-    };
-
-    class lslidarC8Driver : public lslidarDriver {
-    public:
-
-        lslidarC8Driver(ros::NodeHandle &node, ros::NodeHandle &private_nh);
-
-        virtual ~lslidarC8Driver();
-
-//        bool poll(void);
-
-        virtual bool initialize();
-
-
-    private:
-//        double scan_altitude[8];
-//        double cos_scan_altitude[8];
-//        double sin_scan_altitude[8];
-
-//        FiringC8 firings;
-    };
-
-    class lslidarC1Driver : public lslidarDriver {
-    public:
-
-        lslidarC1Driver(ros::NodeHandle &node, ros::NodeHandle &private_nh);
-
-        virtual ~lslidarC1Driver();
-
-//        bool poll(void);
-
-        virtual bool initialize();
-
-    private:
-//        double scan_altitude[8];
-//        double cos_scan_altitude[8];
-//        double sin_scan_altitude[8];
-
-//        FiringC1 firings;
+        int lidar_number_ ;
     };
 
     typedef PointXYZIRT VPoint;

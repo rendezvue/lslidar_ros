@@ -151,7 +151,32 @@ lslidar_c32.launch文件内容如下，每个参数含义见注释说明。
   pcl::PointCloud<pcl::PointXYZI>
   ~~~
 
-  
+
+
+
+### 修改雷达授时方式：
+
+source devel/setup.bash
+
+GPS授时：
+
+~~~bash
+rosservice call /time_service "time_service_mode: 'gps'"
+~~~
+
+PTP授时：
+
+~~~bash
+rosservice call /time_service "time_service_mode: 'ptp'"
+~~~
+
+NTP授时：
+
+~~~bash
+rosservice call /time_service "time_service_mode: 'ntp'"
+~~~
+
+
 
 ## FAQ
 
@@ -183,8 +208,12 @@ Date    : 2022-10-28
 
 ------------------
 
-Original version : LSLIDAR_CX_V4.2.1_221123_ROS
+Original version : LSLIDAR_CX_V4.2.1_221207_ROS
 
 Modify:  1.scan话题新增强度信息
 
-Date    : 2022-11-23
+2.fpga升级，C32 90度修改计算公式
+
+3.ROS驱动新增修改授时方式的功能
+
+Date    : 2022-12-07

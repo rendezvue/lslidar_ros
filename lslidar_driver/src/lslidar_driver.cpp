@@ -34,7 +34,7 @@ namespace lslidar_driver {
                                                                                        current_point_time(0.0),
                                                                                        last_point_time(0.0),
                                                                                        horizontal_angle_resolution(0.0),
-                                                                                       lidar_nuber_(1),
+                                                                                       lidar_number_(1),
                                                                                        sweep_data(
                                                                                                new lslidar_msgs::LslidarScan()),
                                                                                        sweep_data_bak(
@@ -68,7 +68,7 @@ namespace lslidar_driver {
         pnh.param("msop_port", msop_udp_port, (int) MSOP_DATA_PORT_NUMBER);
         pnh.param("difop_port", difop_udp_port, (int) DIFOP_DATA_PORT_NUMBER);
         pnh.param("point_num", point_num, 2000);
-        pnh.param("scan_num", scan_num, 2000);
+        pnh.param("scan_num", scan_num, 8);
         pnh.param("min_range", min_range, 0.3);
         pnh.param("max_range", max_range, 150.0);
         pnh.param("distance_unit", distance_unit, 0.40);
@@ -81,6 +81,20 @@ namespace lslidar_driver {
         pnh.param<std::string>("pointcloud_topic", pointcloud_topic, "lslidar_point_cloud");
         inet_aton(lidar_ip_string.c_str(), &lidar_ip);
         if (add_multicast) ROS_INFO_STREAM("opening UDP socket: group_address " << group_ip_string);
+
+        if (lidar_type == "c16") {
+            if (scan_num > 15) { scan_num = 15; }
+            else if (scan_num < 0) { scan_num = 0; }
+        } else if (lidar_type == "c8") {
+            if (scan_num > 7) { scan_num = 7; }
+            else if (scan_num < 0) { scan_num = 0; }
+        } else if (lidar_type == "c1") {
+            scan_num = 0;
+            publish_scan = true;
+        } else if (lidar_type == "c32") {
+            if (scan_num > 31) { scan_num = 31; }
+            else if (scan_num < 0) { scan_num = 0; }
+        }
         return true;
     }
 
@@ -96,7 +110,8 @@ namespace lslidar_driver {
     bool lslidarDriver::createRosIO() {
         pointcloud_pub = nh.advertise<sensor_msgs::PointCloud2>(pointcloud_topic, 10);
         scan_pub = nh.advertise<sensor_msgs::LaserScan>("scan", 10);
-        lslidar_control = nh.advertiseService("lslidarcontrol", &lslidarC16Driver::lslidarC16Control, this);
+//        lslidar_control = nh.advertiseService("lslidarcontrol", &lslidarDriver::lslidarC16Control, this);
+        time_service_ = nh.advertiseService("time_service", &lslidarDriver::timeService, this);
 
         if (dump_file != "") {
             msop_input_.reset(new lslidar_driver::InputPCAP(pnh, msop_udp_port, 1212, packet_rate, dump_file));
@@ -111,6 +126,71 @@ namespace lslidar_driver {
         return true;
     }
 
+    bool lslidarDriver::initialize() {
+        this->initTimeStamp();
+        if (!loadParameters()) {
+            ROS_INFO("cannot load all required ROS parameters.");
+            return false;
+        }
+        if (!createRosIO()) {
+            ROS_INFO("cannot create all ROS IO.");
+            return false;
+        }
+
+        if (lidar_type == "c16") {
+            lidar_number_ = 16;
+            ROS_INFO("lidar: c16");
+            for (int i = 0; i < 16; ++i) {
+                sin_scan_altitude[i] = sin(c16_vertical_angle[i] * DEG_TO_RAD);
+                cos_scan_altitude[i] = cos(c16_vertical_angle[i] * DEG_TO_RAD);
+            }
+        } else if (lidar_type == "c8") {
+            lidar_number_ = 8;
+            ROS_INFO("lidar: c8");
+            for (int i = 0; i < 8; ++i) {
+                sin_scan_altitude[i] = sin(c8_vertical_angle[i] * DEG_TO_RAD);
+                cos_scan_altitude[i] = cos(c8_vertical_angle[i] * DEG_TO_RAD);
+            }
+        } else if (lidar_type == "c1") {
+            lidar_number_ = 1;
+            ROS_INFO("lidar: c1");
+            for (int i = 0; i < 8; ++i) {
+                sin_scan_altitude[i] = sin(c1_vertical_angle[i] * DEG_TO_RAD);
+                cos_scan_altitude[i] = cos(c1_vertical_angle[i] * DEG_TO_RAD);
+            }
+        } else if (lidar_type == "c32") {
+            lidar_number_ = 32;
+            ROS_INFO("lidar: c32");
+            if ("c32_32" == c32_type) {
+                ROS_INFO("Vertical angle: 32 degrees");
+                for (int i = 0; i < 32; ++i) {
+                    sin_scan_altitude[i] = sin(c32_vertical_angle[i] * DEG_TO_RAD);
+                    cos_scan_altitude[i] = cos(c32_vertical_angle[i] * DEG_TO_RAD);
+                }
+            } else if ("c32_70" == c32_type) {
+                ROS_INFO("Vertical angle: 70 degrees");
+                for (int k = 0; k < 32; ++k) {
+                    sin_scan_altitude[k] = sin(c32_70_vertical_angle[k] * DEG_TO_RAD);
+                    cos_scan_altitude[k] = cos(c32_70_vertical_angle[k] * DEG_TO_RAD);
+                }
+            } else if ("c32_90" == c32_type) {
+                ROS_INFO("Vertical angle: 90 degrees");
+                for (int k = 0; k < 32; ++k) {
+                    sin_scan_altitude[k] = sin(c32_90_vertical_angle[k] * DEG_TO_RAD);
+                    cos_scan_altitude[k] = cos(c32_90_vertical_angle[k] * DEG_TO_RAD);
+                }
+            }
+        }
+
+        // create the sin and cos table for different azimuth values
+        for (int j = 0; j < 36000; ++j) {
+            double angle = static_cast<double>(j) / 100.0 * DEG_TO_RAD;
+            sin_azimuth_table[j] = sin(angle);
+            cos_azimuth_table[j] = cos(angle);
+        }
+        return true;
+    }
+
     void lslidarDriver::difopPoll() {
         // reading and publishing scans as fast as possible.
         lslidar_msgs::LslidarPacketPtr difop_packet_ptr(new lslidar_msgs::LslidarPacket);
@@ -121,13 +201,6 @@ namespace lslidar_driver {
                 for (int i = 0; i < 1206; i++) {
                     difop_data[i] = difop_packet_ptr->data[i];
                 }
-/*              this->packetTimeStamp[4] = difop_packet_ptr->data[57];
-                this->packetTimeStamp[5] = difop_packet_ptr->data[56];
-                this->packetTimeStamp[6] = difop_packet_ptr->data[55];
-                this->packetTimeStamp[7] = difop_packet_ptr->data[54];
-                this->packetTimeStamp[8] = difop_packet_ptr->data[53];
-                this->packetTimeStamp[9] = difop_packet_ptr->data[52];*/
-
             } else if (rc < 0) {
                 return;
             }
@@ -157,8 +230,8 @@ namespace lslidar_driver {
 
         // Iterate through pointcloud
         for (sensor_msgs::PointCloud2ConstIterator<float> iter_x(cloud_msg, "x"), iter_y(cloud_msg, "y"),
-                     iter_z(cloud_msg, "z"),iter_intensity(cloud_msg, "intensity");
-             iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z,++iter_intensity) {
+                     iter_z(cloud_msg, "z"), iter_intensity(cloud_msg, "intensity");
+             iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z, ++iter_intensity) {
             if (std::isnan(*iter_x) || std::isnan(*iter_y) || std::isnan(*iter_z)) {
                 ROS_INFO("rejected for nan in point(%f, %f, %f)\n", *iter_x, *iter_y, *iter_z);
                 continue;
@@ -194,6 +267,7 @@ namespace lslidar_driver {
     }
 
     void lslidarDriver::publishPointcloud() {
+        if (sweep_data_bak->points.size()<65) return;
         std::unique_lock<std::mutex> lock(pointcloud_lock);
         if (pcl_type) {
             pcl::PointCloud<pcl::PointXYZI>::Ptr point_cloud(new pcl::PointCloud<pcl::PointXYZI>);
@@ -277,7 +351,7 @@ namespace lslidar_driver {
                     point_cloud->points.push_back(point);
                     ++point_cloud->width;
                     current_point_time = point.time;
-                    if (current_point_time - last_point_time < 0.0){
+                    if (current_point_time - last_point_time < 0.0) {
                         //ROS_WARN("timestamp is rolled back! current point time: %.12f  last point time: %.12f", current_point_time, last_point_time);
                     }
                     last_point_time = current_point_time;
@@ -403,9 +477,50 @@ namespace lslidar_driver {
         addrSrv.sin_addr.s_addr = inet_addr(lidar_ip_string.c_str());
         addrSrv.sin_family = AF_INET;
         addrSrv.sin_port = htons(difop_udp_port);
-        sendto(socketid, (const char *) config_data, 1212, 0, (struct sockaddr *) &addrSrv, sizeof(addrSrv));
+        sendto(socketid, (const char *) config_data, 1206, 0, (struct sockaddr *) &addrSrv, sizeof(addrSrv));
         return 0;
 
+    }
+
+    bool lslidarDriver::timeService(lslidar_msgs::time_service::Request &req,
+                                    lslidar_msgs::time_service::Response &res) {
+        ROS_INFO("Start to modify radar time service mode");
+        int socketid;
+        unsigned char config_data[1206];
+        mempcpy(config_data, difop_data, 1206);
+        config_data[0] = 0xAA;
+        config_data[1] = 0x00;
+        config_data[2] = 0xFF;
+        config_data[3] = 0x11;
+        config_data[4] = 0x22;
+        config_data[5] = 0x22;
+        config_data[6] = 0xAA;
+        config_data[7] = 0xAA;
+
+        std::string time_service_mode = req.time_service_mode;
+        transform(time_service_mode.begin(), time_service_mode.end(), time_service_mode.begin(), ::tolower);
+
+        if (time_service_mode == "gps") {
+            config_data[45] = 0x00;
+        } else if (time_service_mode == "ptp") {
+            config_data[45] = 0x01;
+        } else if (time_service_mode == "ntp") {
+            config_data[45] = 0x02;
+        } else {
+            ROS_ERROR("Parameter error, please check the input parameters");
+            res.result = false;
+            return true;
+        }
+
+        sockaddr_in addrSrv{};
+        socketid = socket(2, 2, 0);
+        addrSrv.sin_addr.s_addr = inet_addr(lidar_ip_string.c_str());
+        addrSrv.sin_family = AF_INET;
+        addrSrv.sin_port = htons(difop_udp_port);
+        sendto(socketid, (const char *) config_data, 1206, 0, (struct sockaddr *) &addrSrv, sizeof(addrSrv));
+        res.result = true;
+        ROS_INFO("Time service method modified successfully!");
+        return true;
     }
 
     void lslidarDriver::decodePacket(const RawPacket *packet) {
@@ -467,7 +582,6 @@ namespace lslidar_driver {
     }
 
     bool lslidarDriver::poll() {
-        //ROS_INFO("lidar_number: %d",lidar_nuber_);
         // Allocate a new shared pointer for zero-copy sharing with other nodelets.
         lslidar_msgs::LslidarPacketPtr packet(new lslidar_msgs::LslidarPacket());
         // Since the rslidar delivers data at a very high rate, keep
@@ -486,9 +600,10 @@ namespace lslidar_driver {
                 uint64_t timestamp_s = (pkt.data[1201] * pow(2, 32) + pkt.data[1202] * pow(2, 24) +
                                         pkt.data[1203] * pow(2, 16) +
                                         pkt.data[1204] * pow(2, 8) + pkt.data[1205] * pow(2, 0));
-                uint64_t timestamp_nsce = (pkt.data[1206] * pow(2, 24) + pkt.data[1207] * pow(2, 16) +
-                                           pkt.data[1208] * pow(2, 8) +
-                                           pkt.data[1209] * pow(2, 0));
+                uint64_t timestamp_nsce = pkt.data[1206] +
+                                          pkt.data[1207] * pow(2, 8) +
+                                          pkt.data[1208] * pow(2, 16) +
+                                          pkt.data[1209] * pow(2, 24); //ns
                 timeStamp = ros::Time(timestamp_s, timestamp_nsce);// s,ns
                 packet->stamp = timeStamp;
                 current_packet_time = timeStamp.toSec();
@@ -569,20 +684,22 @@ namespace lslidar_driver {
             double cos_azimuth = cos_azimuth_table[table_idx];
             double sin_azimuth = sin_azimuth_table[table_idx];
             double x_coord, y_coord, z_coord;
+            double R1 = (c32_type == "c32_90") ? R1_90 : R1_;
+            double conversionAngle = (c32_type == "c32_90") ? conversionAngle_90 : conversionAngle_;
             if (coordinate_opt) {
-                x_coord = firings.distance[fir_idx] * cos_scan_altitude[fir_idx % lidar_nuber_] * cos_azimuth +
-                          R1_ * cos((20.25 - firings.azimuth[fir_idx] * 0.01) * DEG_TO_RAD);
-                y_coord = -firings.distance[fir_idx] * cos_scan_altitude[fir_idx % lidar_nuber_] * sin_azimuth +
-                          R1_ * sin((20.25 - firings.azimuth[fir_idx] * 0.01) * DEG_TO_RAD);
-                z_coord = firings.distance[fir_idx] * sin_scan_altitude[fir_idx % lidar_nuber_];
+                x_coord = firings.distance[fir_idx] * cos_scan_altitude[fir_idx % lidar_number_] * cos_azimuth +
+                          R1 * cos((conversionAngle - firings.azimuth[fir_idx] * 0.01) * DEG_TO_RAD);
+                y_coord = -firings.distance[fir_idx] * cos_scan_altitude[fir_idx % lidar_number_] * sin_azimuth +
+                          R1 * sin((conversionAngle - firings.azimuth[fir_idx] * 0.01) * DEG_TO_RAD);
+                z_coord = firings.distance[fir_idx] * sin_scan_altitude[fir_idx % lidar_number_];
 
             } else {
                 //Y-axis correspondence 0 degree
-                x_coord = firings.distance[fir_idx] * cos_scan_altitude[fir_idx % lidar_nuber_] * sin_azimuth +
-                          R1_ * sin((firings.azimuth[fir_idx] * 0.01 - 20.25) * DEG_TO_RAD);
-                y_coord = firings.distance[fir_idx] * cos_scan_altitude[fir_idx % lidar_nuber_] * cos_azimuth +
-                          R1_ * cos((firings.azimuth[fir_idx] * 0.01 - 20.25) * DEG_TO_RAD);
-                z_coord = firings.distance[fir_idx] * sin_scan_altitude[fir_idx % lidar_nuber_];
+                x_coord = firings.distance[fir_idx] * cos_scan_altitude[fir_idx % lidar_number_] * sin_azimuth +
+                          R1 * sin((firings.azimuth[fir_idx] * 0.01 - conversionAngle) * DEG_TO_RAD);
+                y_coord = firings.distance[fir_idx] * cos_scan_altitude[fir_idx % lidar_number_] * cos_azimuth +
+                          R1 * cos((firings.azimuth[fir_idx] * 0.01 - conversionAngle) * DEG_TO_RAD);
+                z_coord = firings.distance[fir_idx] * sin_scan_altitude[fir_idx % lidar_number_];
 
             }
             // computer the time of the point
@@ -596,7 +713,7 @@ namespace lslidar_driver {
             }
 
             int remapped_scan_idx = 0;
-            switch (lidar_nuber_) {
+            switch (lidar_number_) {
                 case 1:
                     remapped_scan_idx = 0;
                     break;
@@ -671,20 +788,23 @@ namespace lslidar_driver {
                 double cos_azimuth = cos_azimuth_table[table_idx];
                 double sin_azimuth = sin_azimuth_table[table_idx];
                 double x_coord, y_coord, z_coord;
+                double R1 = (c32_type == "c32_90") ? R1_90 : R1_;
+                double conversionAngle = (c32_type == "c32_90") ? conversionAngle_90 : conversionAngle_;
                 if (coordinate_opt) {
-                    x_coord = firings.distance[fir_idx] * cos_scan_altitude[fir_idx % lidar_nuber_] * cos_azimuth +
-                              R1_ * cos((20.25 - firings.azimuth[fir_idx] * 0.01) * DEG_TO_RAD);
-                    y_coord = -firings.distance[fir_idx] * cos_scan_altitude[fir_idx % lidar_nuber_] * sin_azimuth +
-                              R1_ * sin((20.25 - firings.azimuth[fir_idx] * 0.01) * DEG_TO_RAD);
-                    z_coord = firings.distance[fir_idx] * sin_scan_altitude[fir_idx % lidar_nuber_];
+                    x_coord = firings.distance[fir_idx] * cos_scan_altitude[fir_idx % lidar_number_] * cos_azimuth +
+                              R1 * cos((conversionAngle - firings.azimuth[fir_idx] * 0.01) * DEG_TO_RAD);
+                    y_coord = -firings.distance[fir_idx] * cos_scan_altitude[fir_idx % lidar_number_] * sin_azimuth +
+                              R1 * sin((conversionAngle - firings.azimuth[fir_idx] * 0.01) * DEG_TO_RAD);
+                    z_coord = firings.distance[fir_idx] * sin_scan_altitude[fir_idx % lidar_number_];
 
                 } else {
                     //Y-axis correspondence 0 degree
-                    x_coord = firings.distance[fir_idx] * cos_scan_altitude[fir_idx % lidar_nuber_] * sin_azimuth +
-                              R1_ * sin((firings.azimuth[fir_idx] * 0.01 - 20.25) * DEG_TO_RAD);
-                    y_coord = firings.distance[fir_idx] * cos_scan_altitude[fir_idx % lidar_nuber_] * cos_azimuth +
-                              R1_ * cos((firings.azimuth[fir_idx] * 0.01 - 20.25) * DEG_TO_RAD);
-                    z_coord = firings.distance[fir_idx] * sin_scan_altitude[fir_idx % lidar_nuber_];
+                    x_coord = firings.distance[fir_idx] * cos_scan_altitude[fir_idx % lidar_number_] * sin_azimuth +
+                              R1 * sin((firings.azimuth[fir_idx] * 0.01 - conversionAngle) * DEG_TO_RAD);
+                    y_coord = firings.distance[fir_idx] * cos_scan_altitude[fir_idx % lidar_number_] * cos_azimuth +
+                              R1 * cos((firings.azimuth[fir_idx] * 0.01 - conversionAngle) * DEG_TO_RAD);
+                    z_coord = firings.distance[fir_idx] * sin_scan_altitude[fir_idx % lidar_number_];
+
                 }
                 // computer the time of the point
                 double time;
@@ -698,7 +818,7 @@ namespace lslidar_driver {
                 }
 
                 int remapped_scan_idx = 0;
-                switch (lidar_nuber_) {
+                switch (lidar_number_) {
                     case 1:
                         remapped_scan_idx = 0;
                         break;
@@ -731,174 +851,6 @@ namespace lslidar_driver {
             }
         }
         //packet_pub.publish(*packet);
-        return true;
-    }
-
-    lslidarC16Driver::lslidarC16Driver(ros::NodeHandle &node, ros::NodeHandle &private_nh) : lslidarDriver(node,
-                                                                                                           private_nh) {
-        lidar_nuber_ = 16;
-        return;
-    }
-
-    lslidarC16Driver::~lslidarC16Driver() {
-        if (difop_thread_ != nullptr) {
-            difop_thread_->interrupt();
-            difop_thread_->join();
-        }
-    }
-
-    bool lslidarC16Driver::initialize() {
-        this->initTimeStamp();
-        if (!loadParameters()) {
-            ROS_ERROR("cannot load all required ROS parameters.");
-            return false;
-        }
-        if (!createRosIO()) {
-            ROS_ERROR("cannot create all ROS IO.");
-            return false;
-        }
-        for (int i = 0; i < 16; ++i) {
-            sin_scan_altitude[i] = sin(c16_vertical_angle[i] * DEG_TO_RAD);
-            cos_scan_altitude[i] = cos(c16_vertical_angle[i] * DEG_TO_RAD);
-        }
-
-        // create the sin and cos table for different azimuth values
-        for (int j = 0; j < 36000; ++j) {
-            double angle = static_cast<double>(j) / 100.0 * DEG_TO_RAD;
-            sin_azimuth_table[j] = sin(angle);
-            cos_azimuth_table[j] = cos(angle);
-        }
-        angle_base = M_PI * 2 / point_num;
-        return true;
-    }
-
-/** poll the device
- *  @returns true unless end of file reached
- */
-    lslidarC32Driver::lslidarC32Driver(ros::NodeHandle &node, ros::NodeHandle &private_nh) : lslidarDriver(node,
-                                                                                                           private_nh) {
-        lidar_nuber_ = 32;
-        return;
-    }
-
-    lslidarC32Driver::~lslidarC32Driver() {
-        if (difop_thread_ != nullptr) {
-            difop_thread_->interrupt();
-            difop_thread_->join();
-        }
-    }
-
-    bool lslidarC32Driver::initialize() {
-        if (!loadParameters()) {
-            ROS_ERROR("cannot load all required parameters.");
-            return false;
-        }
-        if (!createRosIO()) {
-            ROS_ERROR("cannot create ROS I/O.");
-            return false;
-        }
-        if ("c32_32" == c32_type) {
-            ROS_INFO("Vertical angle: 32 degrees");
-            for (int i = 0; i < 32; ++i) {
-                sin_scan_altitude[i] = sin(c32_vertical_angle[i] * DEG_TO_RAD);
-                cos_scan_altitude[i] = cos(c32_vertical_angle[i] * DEG_TO_RAD);
-            }
-        } else if ("c32_70" == c32_type) {
-            ROS_INFO("Vertical angle: 70 degrees");
-            for (int k = 0; k < 32; ++k) {
-                sin_scan_altitude[k] = sin(c32_70_vertical_angle[k] * DEG_TO_RAD);
-                cos_scan_altitude[k] = cos(c32_70_vertical_angle[k] * DEG_TO_RAD);
-            }
-        } else if ("c32_90" == c32_type) {
-            ROS_INFO("Vertical angle: 90 degrees");
-            for (int k = 0; k < 32; ++k) {
-                sin_scan_altitude[k] = sin(c32_90_vertical_angle[k] * DEG_TO_RAD);
-                cos_scan_altitude[k] = cos(c32_90_vertical_angle[k] * DEG_TO_RAD);
-            }
-        }
-
-        // create the sin and cos table for different azimuth values
-        for (int j = 0; j < 36000; ++j) {
-            double angle = static_cast<double>(j) / 100.0 * DEG_TO_RAD;
-            sin_azimuth_table[j] = sin(angle);
-            cos_azimuth_table[j] = cos(angle);
-        }
-        angle_base = 2 * M_PI / point_num;
-        return true;
-    }
-
-    lslidarC8Driver::lslidarC8Driver(ros::NodeHandle &node, ros::NodeHandle &private_nh) : lslidarDriver(node,
-                                                                                                         private_nh) {
-        lidar_nuber_ = 8;
-        return;
-    }
-
-
-    lslidarC8Driver::~lslidarC8Driver() {
-        if (difop_thread_ != nullptr) {
-            difop_thread_->interrupt();
-            difop_thread_->join();
-        }
-    }
-
-    bool lslidarC8Driver::initialize() {
-        if (!loadParameters()) {
-            ROS_ERROR("cannot load all required parameters.");
-            return false;
-        }
-        if (!createRosIO()) {
-            ROS_ERROR("cannot create ROS I/O.");
-            return false;
-        }
-        for (int i = 0; i < 8; ++i) {
-            sin_scan_altitude[i] = sin(c8_vertical_angle[i] * DEG_TO_RAD);
-            cos_scan_altitude[i] = cos(c8_vertical_angle[i] * DEG_TO_RAD);
-        }
-
-        // create the sin and cos table for different azimuth values
-        for (int j = 0; j < 36000; ++j) {
-            double angle = static_cast<double>(j) / 100.0 * DEG_TO_RAD;
-            sin_azimuth_table[j] = sin(angle);
-            cos_azimuth_table[j] = cos(angle);
-        }
-        angle_base = 2 * M_PI / point_num;
-        return true;
-    }
-
-    lslidarC1Driver::lslidarC1Driver(ros::NodeHandle &node, ros::NodeHandle &private_nh) : lslidarDriver(node,
-                                                                                                         private_nh) {
-        lidar_nuber_ = 1;
-        return;
-    }
-
-    lslidarC1Driver::~lslidarC1Driver() {
-        if (difop_thread_ != nullptr) {
-            difop_thread_->interrupt();
-            difop_thread_->join();
-        }
-    }
-
-    bool lslidarC1Driver::initialize() {
-        if (!loadParameters()) {
-            ROS_ERROR("cannot load all required parameters.");
-            return false;
-        }
-        if (!createRosIO()) {
-            ROS_ERROR("cannot create ROS I/O.");
-            return false;
-        }
-        for (int i = 0; i < 8; ++i) {
-            sin_scan_altitude[i] = sin(c1_vertical_angle[i] * DEG_TO_RAD);
-            cos_scan_altitude[i] = cos(c1_vertical_angle[i] * DEG_TO_RAD);
-        }
-
-        // create the sin and cos table for different azimuth values
-        for (int j = 0; j < 36000; ++j) {
-            double angle = static_cast<double>(j) / 100.0 * DEG_TO_RAD;
-            sin_azimuth_table[j] = sin(angle);
-            cos_azimuth_table[j] = cos(angle);
-        }
-        angle_base = 2 * M_PI / point_num;
         return true;
     }
 
