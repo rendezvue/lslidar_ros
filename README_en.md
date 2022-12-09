@@ -166,6 +166,50 @@ The content of the lslidar_c32.launch file is as follows, and the meaning of eac
   pcl::PointCloud<pcl::PointXYZI>
   ~~~
 
+### Modify lidar time service mode:
+
+source devel/setup.bash
+
+GPS：
+
+~~~bash
+rosservice call /time_service "time_service_mode: 'gps'"
+~~~
+
+PTP：
+
+~~~bash
+rosservice call /time_service "time_service_mode: 'ptp'"
+~~~
+
+NTP：
+
+~~~bash
+rosservice call /time_service "time_service_mode: 'ntp'"
+~~~
+
+
+
+### lidar power on/off:
+
+source devel/setup.bash
+
+power on：
+
+~~~bash
+rosservice call /lslidarcontrol "LaserControl: 1"
+~~~
+
+power off
+
+~~~bash
+rosservice call /lslidarcontrol "LaserControl: 0"
+~~~
+
+
+
+
+
 ## FAQ
 
 Bug Report
@@ -201,7 +245,7 @@ Original version : LSLIDAR_CX_V4.2.1_221207_ROS
 Modify: 1. Scan topic adds strength information
 
 2. fpga upgrade, C32 90 degree modification of calculation formula
-
 3. ROS driver adds the function of modifying time service mode
+3. ROS driver adds the function of lidar  power on/off function
 
 Date    : 2022-12-07

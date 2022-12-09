@@ -178,6 +178,26 @@ rosservice call /time_service "time_service_mode: 'ntp'"
 
 
 
+### 雷达上下电：
+
+source devel/setup.bash
+
+上电：
+
+~~~bash
+rosservice call /lslidarcontrol "LaserControl: 1"
+~~~
+
+下电
+
+~~~bash
+rosservice call /lslidarcontrol "LaserControl: 0"
+~~~
+
+
+
+
+
 ## FAQ
 
 Bug Report
@@ -215,5 +235,7 @@ Modify:  1.scan话题新增强度信息
 2.fpga升级，C32 90度修改计算公式
 
 3.ROS驱动新增修改授时方式的功能
+
+4.新增雷达上下电功能
 
 Date    : 2022-12-07

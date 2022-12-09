@@ -110,7 +110,7 @@ namespace lslidar_driver {
     bool lslidarDriver::createRosIO() {
         pointcloud_pub = nh.advertise<sensor_msgs::PointCloud2>(pointcloud_topic, 10);
         scan_pub = nh.advertise<sensor_msgs::LaserScan>("scan", 10);
-//        lslidar_control = nh.advertiseService("lslidarcontrol", &lslidarDriver::lslidarC16Control, this);
+        lslidar_control = nh.advertiseService("lslidarcontrol", &lslidarDriver::lslidarC16Control, this);
         time_service_ = nh.advertiseService("time_service", &lslidarDriver::timeService, this);
 
         if (dump_file != "") {
@@ -467,18 +467,18 @@ namespace lslidar_driver {
         config_data[8] = 0x02;
         config_data[9] = 0x58;
         if (power_switch) {
-            config_data[45] = 0x00;
+            config_data[50] = 0xBB;
         } else {
-            config_data[45] = 0x01;
+            config_data[50] = 0xAA;
         }
 
         sockaddr_in addrSrv{};
         socketid = socket(2, 2, 0);
         addrSrv.sin_addr.s_addr = inet_addr(lidar_ip_string.c_str());
         addrSrv.sin_family = AF_INET;
-        addrSrv.sin_port = htons(difop_udp_port);
+        addrSrv.sin_port = htons(2368);
         sendto(socketid, (const char *) config_data, 1206, 0, (struct sockaddr *) &addrSrv, sizeof(addrSrv));
-        return 0;
+        return true;
 
     }
 
@@ -511,12 +511,13 @@ namespace lslidar_driver {
             res.result = false;
             return true;
         }
+        printf("byte[45] %X \n",config_data[45]);
 
         sockaddr_in addrSrv{};
         socketid = socket(2, 2, 0);
         addrSrv.sin_addr.s_addr = inet_addr(lidar_ip_string.c_str());
         addrSrv.sin_family = AF_INET;
-        addrSrv.sin_port = htons(difop_udp_port);
+        addrSrv.sin_port = htons(2368);
         sendto(socketid, (const char *) config_data, 1206, 0, (struct sockaddr *) &addrSrv, sizeof(addrSrv));
         res.result = true;
         ROS_INFO("Time service method modified successfully!");

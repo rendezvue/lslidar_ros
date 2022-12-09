@@ -58,7 +58,6 @@ namespace lslidar_driver {
 
         virtual int getPacket(lslidar_msgs::LslidarPacketPtr &pkt) = 0;
 
-
     protected:
         ros::NodeHandle private_nh_;
         uint16_t port_;
@@ -79,7 +78,6 @@ namespace lslidar_driver {
         virtual ~InputSocket();
 
         virtual int getPacket(lslidar_msgs::LslidarPacketPtr &pkt);
-
 
     private:
         int sockfd_;

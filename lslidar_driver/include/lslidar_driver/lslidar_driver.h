@@ -260,7 +260,7 @@ namespace lslidar_driver {
         //ros::Publisher packet_pub;
         ros::Publisher pointcloud_pub;
         ros::Publisher scan_pub;
-//        ros::ServiceServer lslidar_control;
+        ros::ServiceServer lslidar_control;
         ros::ServiceServer time_service_;
 
         unsigned char difop_data[1206];
