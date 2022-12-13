@@ -1,8 +1,8 @@
-# LSLIDAR_CX_V4.2.1_221207_ROS
+# LSLIDAR_CX_V4.2.1_221214_ROS
 
 ## 1.Introduction
 
-​		LSLIDAR_CX_V4.2.1_221207_ROS is the lidar ros driver in linux environment, which is suitable for C1,C8,C16 and C32(32 degrees,70 degrees,90 degrees)  lidar. The program has  tested under ubuntu 20.04 ros noetic and ubuntu18.04 ros melodic.
+​		LSLIDAR_CX_V4.2.1_221214_ROS is the lidar ros driver in linux environment, which is suitable for C1,C8,C16 and C32(32 degrees,70 degrees,90 degrees)  lidar. The program has  tested under ubuntu 20.04 ros noetic , ubuntu18.04 ros melodic and ubuntu16.04 ros kinetic.
 
 ## 2.Dependencies
 
@@ -190,20 +190,90 @@ rosservice call /time_service "time_service_mode: 'ntp'"
 
 
 
-### lidar power on/off:
+### lidar power on/off(lidar still rotates,  only send equipment packets):
 
 source devel/setup.bash
 
 power on：
 
 ~~~bash
-rosservice call /lslidarcontrol "LaserControl: 1"
+rosservice call /lslidar_control "laser_control: 1"
 ~~~
 
 power off
 
 ~~~bash
-rosservice call /lslidarcontrol "LaserControl: 0"
+rosservice call /lslidar_control "laser_control: 0"
+~~~
+
+
+
+### lidar rotates/stops rotating (motor stops rotating)：
+
+source devel/setup.bash
+
+rotate：
+
+~~~bash
+rosservice call /motor_control "motor_control: 1"
+~~~
+
+stop rotating:
+
+~~~bash
+rosservice call /motor_control "motor_control: 0"
+~~~
+
+
+
+### Set lidar speed:
+
+source devel/setup.bash
+
+Optional frequency  5Hz/10Hz/20Hz
+
+~~~bash
+rosservice call /set_motor_speed "motor_speed: 20"
+~~~
+
+
+
+### Set lidar data packet port
+
+source devel/setup.bash
+
+~~~bash
+rosservice call /set_data_port "data_port: 2368"  #范围(1025,65535)
+~~~
+
+
+
+### Set lidar equipment packet port
+
+source devel/setup.bash
+
+~~~bash
+rosservice call /set_dev_port "dev_port: 2369"  #范围(1025,65535)
+~~~
+
+
+
+### Set lidar ip
+
+source devel/setup.bash
+
+~~~bash
+rosservice call /set_data_ip "data_ip: '192.168.1.200'"
+~~~
+
+
+
+### Set lidar destination ip
+
+source devel/setup.bash
+
+~~~bash
+rosservice call /set_dev_ip "dev_ip: '192.168.1.102'"
 ~~~
 
 
@@ -240,12 +310,12 @@ Date    : 2022-10-28
 
 -------------------
 
-Original version : LSLIDAR_CX_V4.2.1_221207_ROS
+Original version : LSLIDAR_CX_V4.2.1_221214_ROS
 
 Modify: 1. Scan topic adds strength information
 
 2. fpga upgrade, C32 90 degree modification of calculation formula
 3. ROS driver adds the function of modifying time service mode
-3. ROS driver adds the function of lidar  power on/off function
+3. New function to modify lidar configuration
 
-Date    : 2022-12-07
+Date    : 2022-12-14

@@ -1,7 +1,7 @@
-# LSLIDAR_CX_V4.2.1_221123_ROS使用说明
+# LSLIDAR_CX_V4.2.1_221214_ROS使用说明
 
 ## 1.工程介绍
-​		LSLIDAR_CX_V4.2.1_221123_ROS为linux环境下雷达ros驱动，适用于C1,C8,C16,C32(32度，70度和90度)  4.0版本雷达，程序在ubuntu 20.04 ros noetic和ubuntu18.04 ros melodic下测试通过。
+​		LSLIDAR_CX_V4.2.1_221214_ROS为linux环境下雷达ros驱动，适用于C1,C8,C16,C32(32度，70度和90度)  4.0版本雷达，程序在ubuntu 20.04 ros noetic，ubuntu18.04 ros melodic以及ubuntu16.04 ros kinetic下测试通过。
 
 ## 2.依赖
 
@@ -178,23 +178,91 @@ rosservice call /time_service "time_service_mode: 'ntp'"
 
 
 
-### 雷达上下电：
+### 雷达上下电(雷达依然转动，只发设备包，不发送数据包)：
 
 source devel/setup.bash
 
 上电：
 
 ~~~bash
-rosservice call /lslidarcontrol "LaserControl: 1"
+rosservice call /lslidar_control "laser_control: 1"
 ~~~
 
-下电
+下电：
 
 ~~~bash
-rosservice call /lslidarcontrol "LaserControl: 0"
+rosservice call /lslidar_control "laser_control: 0"
 ~~~
 
 
+
+### 雷达转动/停止转动(电机停转)：
+
+source devel/setup.bash
+
+转动：
+
+~~~bash
+rosservice call /motor_control "motor_control: 1"
+~~~
+
+停止转动：
+
+~~~bash
+rosservice call /motor_control "motor_control: 0"
+~~~
+
+
+
+### 设置雷达转速：
+
+source devel/setup.bash
+
+可选频率  5Hz/10Hz/20Hz
+
+~~~bash
+rosservice call /set_motor_speed "motor_speed: 20"
+~~~
+
+
+
+### 设置雷达数据包端口
+
+source devel/setup.bash
+
+~~~bash
+rosservice call /set_data_port "data_port: 2368"  #范围(1025,65535)
+~~~
+
+
+
+### 设置雷达设备包端口
+
+source devel/setup.bash
+
+~~~bash
+rosservice call /set_dev_port "dev_port: 2369"  #范围(1025,65535)
+~~~
+
+
+
+### 设置雷达ip
+
+source devel/setup.bash
+
+~~~bash
+rosservice call /set_data_ip "data_ip: '192.168.1.200'"
+~~~
+
+
+
+### 设置雷达目的ip
+
+source devel/setup.bash
+
+~~~bash
+rosservice call /set_dev_ip "dev_ip: '192.168.1.102'"
+~~~
 
 
 
@@ -228,7 +296,7 @@ Date    : 2022-10-28
 
 ------------------
 
-Original version : LSLIDAR_CX_V4.2.1_221207_ROS
+Original version : LSLIDAR_CX_V4.2.1_221214_ROS
 
 Modify:  1.scan话题新增强度信息
 
@@ -236,6 +304,6 @@ Modify:  1.scan话题新增强度信息
 
 3.ROS驱动新增修改授时方式的功能
 
-4.新增雷达上下电功能
+4.新增雷达上下电,修改雷达ip，端口，转速等功能。
 
-Date    : 2022-12-07
+Date    : 2022-12-14

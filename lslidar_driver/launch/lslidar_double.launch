@@ -5,14 +5,17 @@
   <arg name="device_ip2" default="192.168.1.201" />
   <arg name="msop_port2" default="2370"/>
   <arg name="difop_port2" default="2371"/>
-  <arg name="lidar_type1" default="c16"/>
+  <arg name="lidar_type1" default="c16"/>   <!--lidar_type1 lidar_type2填写启动两台雷达的名称(可选c1/c8/c16/c32) -->
   <arg name="lidar_type2" default="c32"/>
+  <arg name="c32_type" default="c32_32"/>   <!--c32_32: 垂直角度是的30度c32   c32_70: 垂直角度是的70度c32  c32_90: 垂直角度是的90度c32/-->
   <arg name="pcl_type" default="false" />
-  <arg name="c32_70" default="false"/>
   <arg name="use_gps_ts" default="false" />
+  <arg name="packet_rate1" default="1695.0"/>
+  <arg name="packet_rate2" default="1695.0"/>
 
   <node pkg="lslidar_driver" type="lslidar_driver_node" name="lslidar_driver_node" output="screen" ns="c16">
     <!--param name="pcap" value="$(find lslidar_driver)/pcap/xxx.pcap" /-->
+    <param name="packet_rate" value="$(arg packet_rate1)"/>
     <param name="device_ip" value="$(arg device_ip1)" />
     <param name="msop_port" value="$(arg msop_port1)" />
     <param name="difop_port" value="$(arg difop_port1)"/>
@@ -22,7 +25,7 @@
     <param name="group_ip" value="224.1.1.2"/>
     <param name="use_gps_ts" value="$(arg use_gps_ts)"/>
     <param name="min_range" value="0.15"/>
-    <param name="max_range" value="150.0"/>
+    <param name="max_range" value="200.0"/>
     <param name="frame_id" value="laser_link_c16"/>
     <param name="distance_unit" value="0.4"/>
     <param name="angle_disable_min" value="0"/>
@@ -37,17 +40,18 @@
 
     <node pkg="lslidar_driver" type="lslidar_driver_node" name="lslidar_driver_node" output="screen" ns="c32">
       <!--param name="pcap" value="$(find lslidar_driver)/pcap/xxx.pcap" /-->
+      <param name="packet_rate" value="$(arg packet_rate2)"/>
       <param name="device_ip" value="$(arg device_ip2)" />
       <param name="msop_port" value="$(arg msop_port2)" />
       <param name="difop_port" value="$(arg difop_port2)"/>
       <param name="pcl_type" value="$(arg pcl_type)"/>
       <param name="lidar_type" value="$(arg lidar_type2)"/>
-      <param name="c32_70" value="$(arg c32_70)"/>
+      <param name="c32_type" value="$(arg c32_type)"/>
       <param name="add_multicast" value="false"/>
       <param name="group_ip" value="224.1.1.2"/>
       <param name="use_gps_ts" value="$(arg use_gps_ts)"/>
       <param name="min_range" value="0.15"/>
-      <param name="max_range" value="150.0"/>
+      <param name="max_range" value="200.0"/>
       <param name="frame_id" value="laser_link_c32"/>
       <param name="distance_unit" value="0.40"/>
       <param name="angle_disable_min" value="0"/>

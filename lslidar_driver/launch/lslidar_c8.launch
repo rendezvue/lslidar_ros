@@ -19,7 +19,7 @@
     <param name="group_ip" value="224.1.1.2"/>
     <param name="use_gps_ts" value="$(arg use_gps_ts)"/>
     <param name="min_range" value="0.15"/>
-    <param name="max_range" value="150.0"/>
+    <param name="max_range" value="200.0"/>
     <param name="frame_id" value="laser_link"/>
     <param name="distance_unit" value="0.40"/>
     <param name="angle_disable_min" value="0"/>

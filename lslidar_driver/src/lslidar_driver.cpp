@@ -22,7 +22,7 @@
 #include <sensor_msgs/point_cloud2_iterator.h>
 
 namespace lslidar_driver {
-    lslidarDriver::lslidarDriver(ros::NodeHandle &node, ros::NodeHandle &private_nh) : nh(node),
+    LslidarDriver::LslidarDriver(ros::NodeHandle &node, ros::NodeHandle &private_nh) : nh(node),
                                                                                        pnh(private_nh),
                                                                                        last_azimuth(0),
                                                                                        sweep_end_time(0.0),
@@ -42,7 +42,7 @@ namespace lslidar_driver {
         return;
     }
 
-    bool lslidarDriver::checkPacketValidity(const lslidar_driver::RawPacket *packet) {
+    bool LslidarDriver::checkPacketValidity(const lslidar_driver::RawPacket *packet) {
         for (size_t blk_idx = 0; blk_idx < BLOCKS_PER_PACKET; ++blk_idx) {
             if (packet->blocks[blk_idx].header != UPPER_BANK) {
                 return false;
@@ -51,11 +51,11 @@ namespace lslidar_driver {
         return true;
     }
 
-    bool lslidarDriver::isPointInRange(const double &distance) {
+    bool LslidarDriver::isPointInRange(const double &distance) {
         return (distance >= min_range && distance < max_range);
     }
 
-    bool lslidarDriver::loadParameters() {
+    bool LslidarDriver::loadParameters() {
         pnh.param("pcap", dump_file, std::string(""));
         pnh.param("packet_rate", packet_rate, 1695.0);
         pnh.param<std::string>("frame_id", frame_id, "laser_link");
@@ -98,7 +98,7 @@ namespace lslidar_driver {
         return true;
     }
 
-    void lslidarDriver::initTimeStamp() {
+    void LslidarDriver::initTimeStamp() {
         for (int i = 0; i < 10; i++) {
             this->packetTimeStamp[i] = 0;
         }
@@ -107,13 +107,19 @@ namespace lslidar_driver {
         this->timeStamp = ros::Time(0.0);
     }
 
-    bool lslidarDriver::createRosIO() {
+    bool LslidarDriver::createRosIO() {
         pointcloud_pub = nh.advertise<sensor_msgs::PointCloud2>(pointcloud_topic, 10);
         scan_pub = nh.advertise<sensor_msgs::LaserScan>("scan", 10);
-        lslidar_control = nh.advertiseService("lslidarcontrol", &lslidarDriver::lslidarC16Control, this);
-        time_service_ = nh.advertiseService("time_service", &lslidarDriver::timeService, this);
+        time_service_ = nh.advertiseService("time_service", &LslidarDriver::timeService, this);
+        lslidar_control_service_ = nh.advertiseService("lslidar_control", &LslidarDriver::powerOn, this);
+        motor_control_service_ = nh.advertiseService("motor_control", &LslidarDriver::motorControl, this);
+        motor_speed_service_ = nh.advertiseService("set_motor_speed", &LslidarDriver::motorSpeed, this);
+        data_port_service_ = nh.advertiseService("set_data_port", &LslidarDriver::setDataPort, this);
+        dev_port_service_ = nh.advertiseService("set_dev_port", &LslidarDriver::setDevPort, this);
+        data_ip_service_ = nh.advertiseService("set_data_ip", &LslidarDriver::setDataIp, this);
+        dev_ip_service_ = nh.advertiseService("set_dev_ip", &LslidarDriver::setDevIp, this);
 
-        if (dump_file != "") {
+        if (!dump_file.empty()) {
             msop_input_.reset(new lslidar_driver::InputPCAP(pnh, msop_udp_port, 1212, packet_rate, dump_file));
             difop_input_.reset(new lslidar_driver::InputPCAP(pnh, difop_udp_port, 1206, 1, dump_file));
         } else {
@@ -121,12 +127,12 @@ namespace lslidar_driver {
             difop_input_.reset(new lslidar_driver::InputSocket(pnh, difop_udp_port, 1206));
         }
         difop_thread_ = boost::shared_ptr<boost::thread>(
-                new boost::thread(boost::bind(&lslidarDriver::difopPoll, this)));
+                new boost::thread(boost::bind(&LslidarDriver::difopPoll, this)));
 
         return true;
     }
 
-    bool lslidarDriver::initialize() {
+    bool LslidarDriver::initialize() {
         this->initTimeStamp();
         if (!loadParameters()) {
             ROS_INFO("cannot load all required ROS parameters.");
@@ -191,7 +197,7 @@ namespace lslidar_driver {
         return true;
     }
 
-    void lslidarDriver::difopPoll() {
+    void LslidarDriver::difopPoll() {
         // reading and publishing scans as fast as possible.
         lslidar_msgs::LslidarPacketPtr difop_packet_ptr(new lslidar_msgs::LslidarPacket);
         while (ros::ok()) {
@@ -208,7 +214,7 @@ namespace lslidar_driver {
         }
     }
 
-    void lslidarDriver::pointcloudToLaserscan(const sensor_msgs::PointCloud2 &cloud_msg,
+    void LslidarDriver::pointcloudToLaserscan(const sensor_msgs::PointCloud2 &cloud_msg,
                                               sensor_msgs::LaserScan &output_scan) {
         // build laserscan output_scan
         output_scan.header = cloud_msg.header;
@@ -266,8 +272,8 @@ namespace lslidar_driver {
         }
     }
 
-    void lslidarDriver::publishPointcloud() {
-        if (sweep_data_bak->points.size()<65) return;
+    void LslidarDriver::publishPointcloud() {
+        if (sweep_data_bak->points.size() < 65) return;
         std::unique_lock<std::mutex> lock(pointcloud_lock);
         if (pcl_type) {
             pcl::PointCloud<pcl::PointXYZI>::Ptr point_cloud(new pcl::PointCloud<pcl::PointXYZI>);
@@ -372,7 +378,7 @@ namespace lslidar_driver {
         return;
     }
 
-    void lslidarDriver::publishScan() {
+    void LslidarDriver::publishScan() {
         sensor_msgs::LaserScan::Ptr scan(new sensor_msgs::LaserScan);
         int layer_num_local = scan_num;
         ROS_INFO_ONCE("default channel is %d", layer_num_local);
@@ -408,54 +414,7 @@ namespace lslidar_driver {
         }
     }
 
-    bool lslidarDriver::lslidarC16Control(lslidar_msgs::lslidar_control::Request &req,
-                                          lslidar_msgs::lslidar_control::Response &res) {
-        ROS_WARN("--------------------------");
-        // sleep(1);
-        lslidar_msgs::LslidarPacketPtr packet0(new lslidar_msgs::LslidarPacket);
-        packet0->data[0] = 0x00;
-        packet0->data[1] = 0x00;
-        int rc_msop = -1;
-
-        if (req.LaserControl == 1) {
-
-            if ((rc_msop = msop_input_->getPacket(packet0)) == 0) {
-                res.status = 1;
-                ROS_WARN("receive cmd: %d,already power on status", req.LaserControl);
-                return true;
-            }
-            ROS_WARN("receive cmd: %d,power on", req.LaserControl);
-            SendPacketTolidar(true);
-            double time1 = ros::Time::now().toSec();
-
-            do {
-                rc_msop = msop_input_->getPacket(packet0);
-                double time2 = ros::Time::now().toSec();
-                if (time2 - time1 > 20) {
-                    res.status = 0;
-                    ROS_WARN("lidar connect error");
-                    return true;
-                }
-            } while ((rc_msop != 0) && (packet0->data[0] != 0xff) && (packet0->data[1] != 0xee));
-            sleep(5);
-            res.status = 1;
-        } else if (req.LaserControl == 0) {
-            ROS_WARN("receive cmd: %d,power off", req.LaserControl);
-            SendPacketTolidar(false);
-            res.status = 1;
-        } else {
-            ROS_WARN("cmd error");
-            res.status = 0;
-        }
-        return true;
-
-    }
-
-    bool lslidarDriver::SendPacketTolidar(bool power_switch) {
-        int socketid;
-        unsigned char config_data[1206];
-        //int data_port = difop_data[24] * 256 + difop_data[25];
-        mempcpy(config_data, difop_data, 1206);
+    void LslidarDriver::setPacketHeader(unsigned char *config_data) {
         config_data[0] = 0xAA;
         config_data[1] = 0x00;
         config_data[2] = 0xFF;
@@ -464,14 +423,10 @@ namespace lslidar_driver {
         config_data[5] = 0x22;
         config_data[6] = 0xAA;
         config_data[7] = 0xAA;
-        config_data[8] = 0x02;
-        config_data[9] = 0x58;
-        if (power_switch) {
-            config_data[50] = 0xBB;
-        } else {
-            config_data[50] = 0xAA;
-        }
+    }
 
+    bool LslidarDriver::sendPacketTolidar(unsigned char *config_data) const {
+        int socketid;
         sockaddr_in addrSrv{};
         socketid = socket(2, 2, 0);
         addrSrv.sin_addr.s_addr = inet_addr(lidar_ip_string.c_str());
@@ -479,23 +434,61 @@ namespace lslidar_driver {
         addrSrv.sin_port = htons(2368);
         sendto(socketid, (const char *) config_data, 1206, 0, (struct sockaddr *) &addrSrv, sizeof(addrSrv));
         return true;
-
     }
 
-    bool lslidarDriver::timeService(lslidar_msgs::time_service::Request &req,
-                                    lslidar_msgs::time_service::Response &res) {
-        ROS_INFO("Start to modify radar time service mode");
-        int socketid;
+    bool LslidarDriver::powerOn(lslidar_msgs::lslidar_control::Request &req,
+                                lslidar_msgs::lslidar_control::Response &res) {
+        ROS_WARN("--------------------------");
+        // sleep(1);
+        lslidar_msgs::LslidarPacketPtr packet0(new lslidar_msgs::LslidarPacket);
+        packet0->data[0] = 0x00;
+        packet0->data[1] = 0x00;
+        int rc_msop = -1;
+
         unsigned char config_data[1206];
         mempcpy(config_data, difop_data, 1206);
-        config_data[0] = 0xAA;
-        config_data[1] = 0x00;
-        config_data[2] = 0xFF;
-        config_data[3] = 0x11;
-        config_data[4] = 0x22;
-        config_data[5] = 0x22;
-        config_data[6] = 0xAA;
-        config_data[7] = 0xAA;
+        setPacketHeader(config_data);
+
+        if (req.laser_control == 1) {
+            if ((rc_msop = msop_input_->getPacket(packet0)) == 0) {
+                res.result = 1;
+                ROS_WARN("receive cmd: %d,already power on status", req.laser_control);
+                return true;
+            }
+            ROS_WARN("receive cmd: %d,power on", req.laser_control);
+            config_data[50] = 0xBB;
+            sendPacketTolidar(config_data);
+            double time1 = ros::Time::now().toSec();
+
+            do {
+                rc_msop = msop_input_->getPacket(packet0);
+                double time2 = ros::Time::now().toSec();
+                if (time2 - time1 > 20) {
+                    res.result = 0;
+                    ROS_WARN("lidar connect error");
+                    return true;
+                }
+            } while ((rc_msop != 0) && (packet0->data[0] != 0xff) && (packet0->data[1] != 0xee));
+            sleep(5);
+            res.result = 1;
+        } else if (req.laser_control == 0) {
+            config_data[50] = 0xAA;
+            ROS_WARN("receive cmd: %d,power off", req.laser_control);
+            sendPacketTolidar(config_data);
+            res.result = 1;
+        } else {
+            ROS_WARN("cmd error");
+            res.result = 0;
+        }
+        return true;
+    }
+
+    bool LslidarDriver::timeService(lslidar_msgs::time_service::Request &req,
+                                    lslidar_msgs::time_service::Response &res) {
+        ROS_INFO("Start to modify lidar time service mode");
+        unsigned char config_data[1206];
+        mempcpy(config_data, difop_data, 1206);
+        setPacketHeader(config_data);
 
         std::string time_service_mode = req.time_service_mode;
         transform(time_service_mode.begin(), time_service_mode.end(), time_service_mode.begin(), ::tolower);
@@ -511,20 +504,176 @@ namespace lslidar_driver {
             res.result = false;
             return true;
         }
-        printf("byte[45] %X \n",config_data[45]);
-
-        sockaddr_in addrSrv{};
-        socketid = socket(2, 2, 0);
-        addrSrv.sin_addr.s_addr = inet_addr(lidar_ip_string.c_str());
-        addrSrv.sin_family = AF_INET;
-        addrSrv.sin_port = htons(2368);
-        sendto(socketid, (const char *) config_data, 1206, 0, (struct sockaddr *) &addrSrv, sizeof(addrSrv));
+        printf("byte[45] %X \n", config_data[45]);
         res.result = true;
+        sendPacketTolidar(config_data);
         ROS_INFO("Time service method modified successfully!");
         return true;
     }
 
-    void lslidarDriver::decodePacket(const RawPacket *packet) {
+    bool LslidarDriver::motorControl(lslidar_msgs::motor_control::Request &req,
+                                     lslidar_msgs::motor_control::Response &res) {
+        unsigned char config_data[1206];
+        mempcpy(config_data, difop_data, 1206);
+        setPacketHeader(config_data);
+
+        if (req.motor_control == 1) {
+            config_data[41] = 0x00;
+        } else if (req.motor_control == 0) {
+            config_data[41] = 0x01;
+        } else {
+            ROS_ERROR("Parameter error, please check the input parameters");
+            res.result = false;
+            return true;
+        }
+        printf("byte[41] %X \n", config_data[41]);
+        res.result = true;
+        sendPacketTolidar(config_data);
+        ROS_INFO("Set successfully!");
+        return true;
+    }
+
+    bool LslidarDriver::motorSpeed(lslidar_msgs::motor_speed::Request &req,
+                                   lslidar_msgs::motor_speed::Response &res) {
+        unsigned char config_data[1206];
+        mempcpy(config_data, difop_data, 1206);
+        setPacketHeader(config_data);
+
+        if (req.motor_speed == 5) {
+            config_data[8] = 0x01;
+            config_data[9] = 0x2c;
+        } else if (req.motor_speed == 10) {
+            config_data[8] = 0x02;
+            config_data[9] = 0x58;
+        } else if (req.motor_speed == 20) {
+            config_data[8] = 0x04;
+            config_data[9] = 0xB0;
+        } else {
+            ROS_ERROR("Parameter error, please check the input parameters");
+            res.result = false;
+            return true;
+        }
+        res.result = true;
+        sendPacketTolidar(config_data);
+        ROS_INFO("Set successfully!");
+        return true;
+    }
+
+    bool LslidarDriver::setDataPort(lslidar_msgs::data_port::Request &req,
+                                    lslidar_msgs::data_port::Response &res) {
+        unsigned char config_data[1206];
+        mempcpy(config_data, difop_data, 1206);
+        setPacketHeader(config_data);
+
+        int dev_port = config_data[26] * 256 + config_data[27];
+        if (req.data_port < 1025 || req.data_port > 65535 || req.data_port == dev_port) {
+            ROS_ERROR("Parameter error, please check the input parameters");
+            res.result = false;
+            return true;
+        } else {
+            config_data[24] = req.data_port / 256;
+            config_data[25] = req.data_port % 256;
+        }
+        res.result = true;
+        sendPacketTolidar(config_data);
+        ROS_INFO("Set successfully!");
+        return true;
+    }
+
+    bool LslidarDriver::setDevPort(lslidar_msgs::dev_port::Request &req,
+                                   lslidar_msgs::dev_port::Response &res) {
+        unsigned char config_data[1206];
+        mempcpy(config_data, difop_data, 1206);
+        setPacketHeader(config_data);
+
+        int data_port = config_data[24] * 256 + config_data[25];
+        if (req.dev_port < 1025 || req.dev_port > 65535 || req.dev_port == data_port) {
+            ROS_ERROR("Parameter error, please check the input parameters");
+            res.result = false;
+            return true;
+        } else {
+            config_data[26] = req.dev_port / 256;
+            config_data[27] = req.dev_port % 256;
+        }
+        res.result = true;
+        sendPacketTolidar(config_data);
+        ROS_INFO("Set successfully!");
+        return true;
+    }
+
+    bool LslidarDriver::setDataIp(lslidar_msgs::data_ip::Request &req,
+                                  lslidar_msgs::data_ip::Response &res) {
+        std::regex ipv4("\\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b");
+        if(!regex_match(req.data_ip, ipv4))
+        {
+            ROS_ERROR("Parameter error, please check the input parameters");
+            res.result = false;
+            return true;
+        }
+
+        unsigned char config_data[1206];
+        mempcpy(config_data, difop_data, 1206);
+        setPacketHeader(config_data);
+
+        unsigned short first_value,second_value,third_value,end_value;
+        sscanf(req.data_ip.c_str(), "%hu.%hu.%hu.%hu", &first_value, &second_value, &third_value, &end_value);
+
+        std::string dev_ip = std::to_string(config_data[14]) + "." + std::to_string(config_data[15]) + "." +
+                             std::to_string(config_data[16]) + "." + std::to_string(config_data[17]);
+        if (first_value == 0 || first_value == 127 ||
+            (first_value >= 240 && first_value <= 255) || dev_ip == req.data_ip) {
+            ROS_ERROR("Parameter error, please check the input parameters");
+            res.result = false;
+            return true;
+        } else {
+            config_data[10] = first_value;
+            config_data[11] = second_value;
+            config_data[12] = third_value;
+            config_data[13] = end_value;
+        }
+        res.result = true;
+        sendPacketTolidar(config_data);
+        ROS_INFO("Set successfully!");
+        return true;
+    }
+
+    bool LslidarDriver::setDevIp(lslidar_msgs::dev_ip::Request &req,
+                                  lslidar_msgs::dev_ip::Response &res) {
+        std::regex ipv4("\\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b");
+        if(!regex_match(req.dev_ip, ipv4))
+        {
+            ROS_ERROR("Parameter error, please check the input parameters");
+            res.result = false;
+            return true;
+        }
+
+        unsigned char config_data[1206];
+        mempcpy(config_data, difop_data, 1206);
+        setPacketHeader(config_data);
+
+        unsigned short first_value,second_value,third_value,end_value;
+        sscanf(req.dev_ip.c_str(), "%hu.%hu.%hu.%hu", &first_value, &second_value, &third_value, &end_value);
+
+        std::string data_ip = std::to_string(config_data[10]) + "." + std::to_string(config_data[11]) + "." +
+                             std::to_string(config_data[12]) + "." + std::to_string(config_data[13]);
+        if (first_value == 0 || first_value == 127 ||
+            (first_value >= 240 && first_value <= 255) || data_ip == req.dev_ip) {
+            ROS_ERROR("Parameter error, please check the input parameters");
+            res.result = false;
+            return true;
+        } else {
+            config_data[14] = first_value;
+            config_data[15] = second_value;
+            config_data[16] = third_value;
+            config_data[17] = end_value;
+        }
+        res.result = true;
+        sendPacketTolidar(config_data);
+        ROS_INFO("Set successfully!");
+        return true;
+    }
+
+    void LslidarDriver::decodePacket(const RawPacket *packet) {
         //couputer azimuth angle for each firing
         for (size_t b_idx = 0; b_idx < BLOCKS_PER_PACKET; ++b_idx) {
             firings.firing_azimuth[b_idx] = packet->blocks[b_idx].rotation % 36000; //* 0.01 * DEG_TO_RAD;
@@ -582,7 +731,7 @@ namespace lslidar_driver {
         return;
     }
 
-    bool lslidarDriver::poll() {
+    bool LslidarDriver::poll() {
         // Allocate a new shared pointer for zero-copy sharing with other nodelets.
         lslidar_msgs::LslidarPacketPtr packet(new lslidar_msgs::LslidarPacket());
         // Since the rslidar delivers data at a very high rate, keep

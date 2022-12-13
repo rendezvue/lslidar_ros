@@ -44,6 +44,14 @@ class Request;
 #include <lslidar_msgs/LslidarPacket.h>
 #include <lslidar_msgs/lslidar_control.h>
 #include <lslidar_msgs/time_service.h>
+#include <lslidar_msgs/motor_speed.h>
+#include <lslidar_msgs/motor_control.h>
+#include <lslidar_msgs/data_port.h>
+#include <lslidar_msgs/dev_port.h>
+#include <lslidar_msgs/data_ip.h>
+#include <lslidar_msgs/dev_ip.h>
+#include <regex>
+
 #include <memory>
 #include <mutex>
 
@@ -61,10 +69,6 @@ namespace lslidar_driver {
     static const int FIRINGS_PER_BLOCK = 2;
     static const int SCANS_PER_FIRING = 16;
     static const int SCANS_PER_FIRING_CX = 32;
-    static const int SCANS_PER_FIRING_C32 = 32;
-    static const int SCANS_PER_FIRING_C16 = 32;
-    static const int SCANS_PER_FIRING_C8 = 32;
-    static const int SCANS_PER_FIRING_C1 = 32;
     static const int DSR_TOFFSET = 1;
     static const int FIRING_TOFFSET = 16;
     static const int FIRING_TOFFSET_C32 = 32;
@@ -72,10 +76,6 @@ namespace lslidar_driver {
     static const int PACKET_SIZE = 1212;
     static const int BLOCKS_PER_PACKET = 12;
     static const int FIRINGS_PER_PACKET_CX = BLOCKS_PER_PACKET;
-    static const int FIRINGS_PER_PACKET_C1 = BLOCKS_PER_PACKET;
-    static const int FIRINGS_PER_PACKET_C8 = BLOCKS_PER_PACKET;
-    static const int FIRINGS_PER_PACKET_C16 = BLOCKS_PER_PACKET;
-    static const int FIRINGS_PER_PACKET_C32 = BLOCKS_PER_PACKET; //12
     static const int SCANS_PER_PACKET = SCANS_PER_FIRING * FIRINGS_PER_BLOCK * BLOCKS_PER_PACKET; //384
     //unit:meter
     static const double R1_ = 0.0361;     //
@@ -136,34 +136,6 @@ namespace lslidar_driver {
         double intensity[SCANS_PER_PACKET];
     };
 
-    struct FiringC1 {
-        uint16_t firing_azimuth[FIRINGS_PER_PACKET_C1];
-        uint16_t azimuth[SCANS_PER_PACKET];
-        double distance[SCANS_PER_PACKET];
-        double intensity[SCANS_PER_PACKET];
-    };
-
-    struct FiringC8 {
-        uint16_t firing_azimuth[FIRINGS_PER_PACKET_C8];
-        uint16_t azimuth[SCANS_PER_PACKET];
-        double distance[SCANS_PER_PACKET];
-        double intensity[SCANS_PER_PACKET];
-    };
-
-    struct FiringC16 {
-        uint16_t firing_azimuth[FIRINGS_PER_PACKET_C16];
-        uint16_t azimuth[SCANS_PER_PACKET];
-        double distance[SCANS_PER_PACKET];
-        double intensity[SCANS_PER_PACKET];
-    };
-
-    struct FiringC32 {
-        uint16_t firing_azimuth[FIRINGS_PER_PACKET_C32];
-        uint16_t azimuth[SCANS_PER_PACKET];
-        double distance[SCANS_PER_PACKET];
-        double intensity[SCANS_PER_PACKET];
-    };
-
     struct PointXYZIRT {
         PCL_ADD_POINT4D;
         PCL_ADD_INTENSITY;
@@ -175,11 +147,11 @@ namespace lslidar_driver {
 
     static std::string lidar_type;
 
-    class lslidarDriver {
+    class LslidarDriver {
     public:
-        lslidarDriver(ros::NodeHandle &node, ros::NodeHandle &private_nh);
+        LslidarDriver(ros::NodeHandle &node, ros::NodeHandle &private_nh);
 
-        ~lslidarDriver() {}
+        ~LslidarDriver() {}
 
         bool checkPacketValidity(const RawPacket *packet);
 
@@ -198,13 +170,33 @@ namespace lslidar_driver {
 
         void publishScan();
 
-        bool lslidarC16Control(lslidar_msgs::lslidar_control::Request &req,
+        bool powerOn(lslidar_msgs::lslidar_control::Request &req,
                                lslidar_msgs::lslidar_control::Response &res);
+
+        bool motorControl(lslidar_msgs::motor_control::Request &req,
+                     lslidar_msgs::motor_control::Response &res);
+
+        bool motorSpeed(lslidar_msgs::motor_speed::Request &req,
+                          lslidar_msgs::motor_speed::Response &res);
 
         bool timeService(lslidar_msgs::time_service::Request &req,
                                lslidar_msgs::time_service::Response &res);
 
-        bool SendPacketTolidar(bool power_switch);
+        bool setDataPort(lslidar_msgs::data_port::Request &req,
+                        lslidar_msgs::data_port::Response &res);
+
+        bool setDevPort(lslidar_msgs::dev_port::Request &req,
+                         lslidar_msgs::dev_port::Response &res);
+
+        bool setDataIp(lslidar_msgs::data_ip::Request &req,
+                         lslidar_msgs::data_ip::Response &res);
+
+        bool setDevIp(lslidar_msgs::dev_ip::Request &req,
+                        lslidar_msgs::dev_ip::Response &res);
+
+        static void setPacketHeader(unsigned char *config_data);
+
+        bool sendPacketTolidar(unsigned char *config_data) const;
 
         void decodePacket(const RawPacket *packet);
 
@@ -260,8 +252,14 @@ namespace lslidar_driver {
         //ros::Publisher packet_pub;
         ros::Publisher pointcloud_pub;
         ros::Publisher scan_pub;
-        ros::ServiceServer lslidar_control;
-        ros::ServiceServer time_service_;
+        ros::ServiceServer time_service_;               //授时
+        ros::ServiceServer lslidar_control_service_;    //上下电
+        ros::ServiceServer motor_control_service_;      //雷达转动/停转
+        ros::ServiceServer motor_speed_service_;        //雷达频率
+        ros::ServiceServer data_port_service_;          //数据包端口
+        ros::ServiceServer dev_port_service_;           //设备包端口
+        ros::ServiceServer data_ip_service_;            //数据包ip
+        ros::ServiceServer dev_ip_service_;             //设备包ip
 
         unsigned char difop_data[1206];
         unsigned char packetTimeStamp[10];

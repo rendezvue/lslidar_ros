@@ -20,7 +20,7 @@ int main(int argc, char **argv) {
     private_nh.param("lidar_type", lidar_type, std::string("c16"));
     ROS_INFO("lslidar type: %s", lidar_type.c_str());
 
-    lslidar_driver::lslidarDriver dvr(node, private_nh);
+    lslidar_driver::LslidarDriver dvr(node, private_nh);
     // loop until shut down or end of file
     if (!dvr.initialize()) {
         ROS_ERROR("cannot initialize lslidar driver.");

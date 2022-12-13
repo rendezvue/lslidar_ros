@@ -32,12 +32,12 @@ namespace lslidar_driver {
         volatile bool running_;  ///< device thread is running
         boost::shared_ptr<boost::thread> deviceThread_;
 
-        boost::shared_ptr<lslidarDriver> dvr_;  ///< driver implementation class
+        boost::shared_ptr<LslidarDriver> dvr_;  ///< driver implementation class
     };
 
     void DriverNodelet::onInit() {
         // start the driver
-        dvr_.reset(new lslidarDriver(getNodeHandle(), getPrivateNodeHandle()));
+        dvr_.reset(new LslidarDriver(getNodeHandle(), getPrivateNodeHandle()));
         // spawn device poll thread
         running_ = true;
         deviceThread_ = boost::shared_ptr<boost::thread>(
