@@ -49,7 +49,7 @@ class Request;
 #include <lslidar_msgs/data_port.h>
 #include <lslidar_msgs/dev_port.h>
 #include <lslidar_msgs/data_ip.h>
-#include <lslidar_msgs/dev_ip.h>
+#include <lslidar_msgs/destination_ip.h>
 #include <regex>
 
 #include <memory>
@@ -191,8 +191,8 @@ namespace lslidar_driver {
         bool setDataIp(lslidar_msgs::data_ip::Request &req,
                          lslidar_msgs::data_ip::Response &res);
 
-        bool setDevIp(lslidar_msgs::dev_ip::Request &req,
-                        lslidar_msgs::dev_ip::Response &res);
+        bool setDestinationIp(lslidar_msgs::destination_ip::Request &req,
+                        lslidar_msgs::destination_ip::Response &res);
 
         static void setPacketHeader(unsigned char *config_data);
 
@@ -259,7 +259,7 @@ namespace lslidar_driver {
         ros::ServiceServer data_port_service_;          //数据包端口
         ros::ServiceServer dev_port_service_;           //设备包端口
         ros::ServiceServer data_ip_service_;            //数据包ip
-        ros::ServiceServer dev_ip_service_;             //设备包ip
+        ros::ServiceServer destination_ip_service_;             //设备包ip
 
         unsigned char difop_data[1206];
         unsigned char packetTimeStamp[10];

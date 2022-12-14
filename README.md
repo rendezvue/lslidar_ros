@@ -88,7 +88,7 @@ lslidar_c32.launch文件内容如下，每个参数含义见注释说明。
     <param name="distance_unit" value="0.40"/>                #雷达距离分辨率
     <param name="angle_disable_min" value="0"/>               #雷达裁剪角度开始值 ，单位0.01°
     <param name="angle_disable_max" value="0"/>               #雷达裁剪角度结束值，单位0.01°
-    <param name="horizontal_angle_resolution" value="0.2"/>   # 水平角度分辨率 10Hz:0.2  20Hz:0.4 5Hz: 0.1 
+    <param name="horizontal_angle_resolution" value="0.18"/>   # 水平角度分辨率 10Hz:0.18  20Hz:0.36 5Hz: 0.09 
     <param name="scan_num" value="10"/>                       #laserscan线号
     <param name="read_once" value="false"/>                   #是否重复播放pcap包，  false: 重复播放  true:只播放一次
     <param name="publish_scan" value="false"/>                #是否发布scan
@@ -231,8 +231,10 @@ rosservice call /set_motor_speed "motor_speed: 20"
 source devel/setup.bash
 
 ~~~bash
-rosservice call /set_data_port "data_port: 2368"  #范围(1025,65535)
+rosservice call /set_data_port "data_port: 2368"  #范围[1025,65535]
 ~~~
+
+**备注：设置完以后，需要修改launch文件参数，然后重启驱动程序。**
 
 
 
@@ -241,8 +243,10 @@ rosservice call /set_data_port "data_port: 2368"  #范围(1025,65535)
 source devel/setup.bash
 
 ~~~bash
-rosservice call /set_dev_port "dev_port: 2369"  #范围(1025,65535)
+rosservice call /set_dev_port "dev_port: 2369"  #范围[1025,65535]
 ~~~
+
+**备注：设置完以后，需要修改launch文件参数，然后重启驱动程序。**
 
 
 
@@ -254,6 +258,8 @@ source devel/setup.bash
 rosservice call /set_data_ip "data_ip: '192.168.1.200'"
 ~~~
 
+**备注：设置完以后，需要修改launch文件参数，然后重启驱动程序。**
+
 
 
 ### 设置雷达目的ip
@@ -261,8 +267,10 @@ rosservice call /set_data_ip "data_ip: '192.168.1.200'"
 source devel/setup.bash
 
 ~~~bash
-rosservice call /set_dev_ip "dev_ip: '192.168.1.102'"
+rosservice call /set_destination_ip "destination_ip: '192.168.1.102'"
 ~~~
+
+**备注：设置完以后，需要修改launch文件参数，然后重启驱动程序。**
 
 
 

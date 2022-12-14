@@ -28,7 +28,7 @@ add_service_files(
         data_port.srv
         dev_port.srv
         data_ip.srv
-        dev_ip.srv
+        destination_ip.srv
 )
 
 

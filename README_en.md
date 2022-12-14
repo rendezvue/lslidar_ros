@@ -103,7 +103,7 @@ The content of the lslidar_c32.launch file is as follows, and the meaning of eac
     <param name="distance_unit" value="0.40"/>                 #lidar range resolution
     <param name="angle_disable_min" value="0"/>               #lidar clipping angle start value ，unit:0.01°
     <param name="angle_disable_max" value="0"/>               #lidar clipping angle end value ，unit:0.01°
-     <param name="horizontal_angle_resolution" value="0.2"/>   # Horizontal angle resolution 10Hz:0.2  20Hz:0.4 5Hz: 0.1 
+     <param name="horizontal_angle_resolution" value="0.18"/>   # Horizontal angle resolution 10Hz:0.18  20Hz:0.36 5Hz: 0.09 
     <param name="scan_num" value="10"/>                       #laserscan line number
     <param name="read_once" value="false"/>                   #Whether to play the pcap package repeatedly, false: play it repeatedly true: play it only once
     <param name="publish_scan" value="false"/>               #Whether to publish the scan
@@ -124,7 +124,7 @@ The content of the lslidar_c32.launch file is as follows, and the meaning of eac
   - Modify the following parameters of the launch file
 
   ~~~shell
-  <param name="add_multicast" value="true"/>                 #add multicast
+  <param name="add_multicast" value="true"/>                 # add multicast
   <param name="group_ip" value="224.1.1.2"/>                 # The multicast ip address set by the host computer
   ~~~
 
@@ -243,8 +243,10 @@ rosservice call /set_motor_speed "motor_speed: 20"
 source devel/setup.bash
 
 ~~~bash
-rosservice call /set_data_port "data_port: 2368"  #范围(1025,65535)
+rosservice call /set_data_port "data_port: 2368"  #范围[1025,65535]
 ~~~
+
+**Note: After setting, you need to modify the launch file parameters and restart the driver.**
 
 
 
@@ -253,8 +255,10 @@ rosservice call /set_data_port "data_port: 2368"  #范围(1025,65535)
 source devel/setup.bash
 
 ~~~bash
-rosservice call /set_dev_port "dev_port: 2369"  #范围(1025,65535)
+rosservice call /set_dev_port "dev_port: 2369"  #范围[1025,65535]
 ~~~
+
+**Note: After setting, you need to modify the launch file parameters and restart the driver.**
 
 
 
@@ -266,6 +270,8 @@ source devel/setup.bash
 rosservice call /set_data_ip "data_ip: '192.168.1.200'"
 ~~~
 
+**Note: After setting, you need to modify the launch file parameters and restart the driver.**
+
 
 
 ### Set lidar destination ip
@@ -273,10 +279,10 @@ rosservice call /set_data_ip "data_ip: '192.168.1.200'"
 source devel/setup.bash
 
 ~~~bash
-rosservice call /set_dev_ip "dev_ip: '192.168.1.102'"
+rosservice call /set_destination_ip "destination_ip: '192.168.1.102'"
 ~~~
 
-
+**Note: After setting, you need to modify the launch file parameters and restart the driver.**
 
 
 

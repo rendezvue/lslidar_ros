@@ -117,7 +117,7 @@ namespace lslidar_driver {
         data_port_service_ = nh.advertiseService("set_data_port", &LslidarDriver::setDataPort, this);
         dev_port_service_ = nh.advertiseService("set_dev_port", &LslidarDriver::setDevPort, this);
         data_ip_service_ = nh.advertiseService("set_data_ip", &LslidarDriver::setDataIp, this);
-        dev_ip_service_ = nh.advertiseService("set_dev_ip", &LslidarDriver::setDevIp, this);
+        destination_ip_service_ = nh.advertiseService("set_destination_ip", &LslidarDriver::setDestinationIp, this);
 
         if (!dump_file.empty()) {
             msop_input_.reset(new lslidar_driver::InputPCAP(pnh, msop_udp_port, 1212, packet_rate, dump_file));
@@ -618,10 +618,10 @@ namespace lslidar_driver {
         unsigned short first_value,second_value,third_value,end_value;
         sscanf(req.data_ip.c_str(), "%hu.%hu.%hu.%hu", &first_value, &second_value, &third_value, &end_value);
 
-        std::string dev_ip = std::to_string(config_data[14]) + "." + std::to_string(config_data[15]) + "." +
+        std::string destination_ip = std::to_string(config_data[14]) + "." + std::to_string(config_data[15]) + "." +
                              std::to_string(config_data[16]) + "." + std::to_string(config_data[17]);
         if (first_value == 0 || first_value == 127 ||
-            (first_value >= 240 && first_value <= 255) || dev_ip == req.data_ip) {
+            (first_value >= 240 && first_value <= 255) || destination_ip == req.data_ip) {
             ROS_ERROR("Parameter error, please check the input parameters");
             res.result = false;
             return true;
@@ -637,10 +637,10 @@ namespace lslidar_driver {
         return true;
     }
 
-    bool LslidarDriver::setDevIp(lslidar_msgs::dev_ip::Request &req,
-                                  lslidar_msgs::dev_ip::Response &res) {
+    bool LslidarDriver::setDestinationIp(lslidar_msgs::destination_ip::Request &req,
+                                  lslidar_msgs::destination_ip::Response &res) {
         std::regex ipv4("\\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b");
-        if(!regex_match(req.dev_ip, ipv4))
+        if(!regex_match(req.destination_ip, ipv4))
         {
             ROS_ERROR("Parameter error, please check the input parameters");
             res.result = false;
@@ -652,12 +652,12 @@ namespace lslidar_driver {
         setPacketHeader(config_data);
 
         unsigned short first_value,second_value,third_value,end_value;
-        sscanf(req.dev_ip.c_str(), "%hu.%hu.%hu.%hu", &first_value, &second_value, &third_value, &end_value);
+        sscanf(req.destination_ip.c_str(), "%hu.%hu.%hu.%hu", &first_value, &second_value, &third_value, &end_value);
 
         std::string data_ip = std::to_string(config_data[10]) + "." + std::to_string(config_data[11]) + "." +
                              std::to_string(config_data[12]) + "." + std::to_string(config_data[13]);
         if (first_value == 0 || first_value == 127 ||
-            (first_value >= 240 && first_value <= 255) || data_ip == req.dev_ip) {
+            (first_value >= 240 && first_value <= 255) || data_ip == req.destination_ip) {
             ROS_ERROR("Parameter error, please check the input parameters");
             res.result = false;
             return true;
