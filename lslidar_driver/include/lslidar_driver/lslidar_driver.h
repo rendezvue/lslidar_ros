@@ -51,6 +51,7 @@ class Request;
 #include <lslidar_msgs/data_ip.h>
 #include <lslidar_msgs/destination_ip.h>
 #include <regex>
+#include <atomic>
 
 #include <memory>
 #include <mutex>
@@ -259,7 +260,7 @@ namespace lslidar_driver {
         ros::ServiceServer data_port_service_;          //数据包端口
         ros::ServiceServer dev_port_service_;           //设备包端口
         ros::ServiceServer data_ip_service_;            //数据包ip
-        ros::ServiceServer destination_ip_service_;             //设备包ip
+        ros::ServiceServer destination_ip_service_;     //设备包ip
 
         unsigned char difop_data[1206];
         unsigned char packetTimeStamp[10];
@@ -276,6 +277,7 @@ namespace lslidar_driver {
         double sin_scan_altitude[32] = {0};
         double horizontal_angle_resolution;
         int lidar_number_ ;
+        std::atomic<bool> is_get_difop_ {false};
     };
 
     typedef PointXYZIRT VPoint;
