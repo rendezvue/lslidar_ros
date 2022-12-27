@@ -208,6 +208,7 @@ namespace lslidar_driver {
                     difop_packet_ptr->data[2] != 0x00 || difop_packet_ptr->data[3] != 0x5a) {
                     return;
                 }
+                time_service_mode_ = difop_packet_ptr->data[45];
                 for (int i = 0; i < 1206; i++) {
                     difop_data[i] = difop_packet_ptr->data[i];
                 }
@@ -251,20 +252,20 @@ namespace lslidar_driver {
             double range = hypot(*iter_x, *iter_y);
             if (range < min_range) {
                 ROS_DEBUG("rejected for range %f below minimum value %f. Point: (%f, %f, %f)", range, min_range,
-                         *iter_x,
-                         *iter_y, *iter_z);
+                          *iter_x,
+                          *iter_y, *iter_z);
                 continue;
             }
             if (range > max_range) {
                 ROS_DEBUG("rejected for range %f above maximum value %f. Point: (%f, %f, %f)", range, max_range,
-                         *iter_x,
-                         *iter_y, *iter_z);
+                          *iter_x,
+                          *iter_y, *iter_z);
                 continue;
             }
             double angle = atan2(*iter_y, *iter_x);
             if (angle < output_scan.angle_min || angle > output_scan.angle_max) {
                 ROS_DEBUG("rejected for angle %f not in range (%f, %f)\n", angle, output_scan.angle_min,
-                         output_scan.angle_max);
+                          output_scan.angle_max);
                 continue;
             }
 
@@ -279,13 +280,13 @@ namespace lslidar_driver {
 
     void LslidarDriver::publishPointcloud() {
         if (sweep_data_bak->points.size() < 65) return;
-        std::unique_lock<std::mutex> lock(pointcloud_lock);
+        std::unique_lock <std::mutex> lock(pointcloud_lock);
         if (pcl_type) {
-            pcl::PointCloud<pcl::PointXYZI>::Ptr point_cloud(new pcl::PointCloud<pcl::PointXYZI>);
+            pcl::PointCloud<pcl::PointXYZI>::Ptr point_cloud(new pcl::PointCloud <pcl::PointXYZI>);
             point_cloud->header.frame_id = frame_id;
             point_cloud->height = 1;
             point_cloud->header.stamp = static_cast<uint64_t>(sweep_end_time * 1e6);
-            pcl::PointCloud<pcl::PointXYZI>::Ptr point_cloud_scan(new pcl::PointCloud<pcl::PointXYZI>);
+            pcl::PointCloud<pcl::PointXYZI>::Ptr point_cloud_scan(new pcl::PointCloud <pcl::PointXYZI>);
             point_cloud_scan->header.frame_id = frame_id;
             point_cloud_scan->height = 1;
             point_cloud_scan->header.stamp = static_cast<uint64_t>(sweep_end_time * 1e6);
@@ -450,9 +451,9 @@ namespace lslidar_driver {
         packet0->data[1] = 0x00;
         int rc_msop = -1;
 
-        if(!is_get_difop_) {
+        if (!is_get_difop_) {
             res.result = 0;
-            ROS_ERROR( "Can not get dev packet! Set failed!");
+            ROS_ERROR("Can not get dev packet! Set failed!");
             return true;
         }
 
@@ -460,7 +461,7 @@ namespace lslidar_driver {
         mempcpy(config_data, difop_data, 1206);
         if (config_data[0] != 0xa5 || config_data[1] != 0xff || config_data[2] != 0x00 || config_data[3] != 0x5a) {
             res.result = 0;
-            ROS_ERROR( "Can not get dev packet! Set failed!");
+            ROS_ERROR("Can not get dev packet! Set failed!");
             return true;
         }
         setPacketHeader(config_data);
@@ -503,9 +504,9 @@ namespace lslidar_driver {
     bool LslidarDriver::timeService(lslidar_msgs::time_service::Request &req,
                                     lslidar_msgs::time_service::Response &res) {
         ROS_INFO("Start to modify lidar time service mode");
-        if(!is_get_difop_) {
+        if (!is_get_difop_) {
             res.result = 0;
-            ROS_ERROR( "Can not get dev packet! Set failed!");
+            ROS_ERROR("Can not get dev packet! Set failed!");
             return true;
         }
 
@@ -513,7 +514,7 @@ namespace lslidar_driver {
         mempcpy(config_data, difop_data, 1206);
         if (config_data[0] != 0xa5 || config_data[1] != 0xff || config_data[2] != 0x00 || config_data[3] != 0x5a) {
             res.result = 0;
-            ROS_ERROR( "Can not get dev packet! Set failed!");
+            ROS_ERROR("Can not get dev packet! Set failed!");
             return true;
         }
         setPacketHeader(config_data);
@@ -528,11 +529,26 @@ namespace lslidar_driver {
             config_data[45] = 0x01;
         } else if (time_service_mode == "ntp") {
             config_data[45] = 0x02;
+            std::string ntp_ip = req.ntp_ip;
+            std::regex ipv4(
+                    "\\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b");
+            if (!regex_match(ntp_ip, ipv4)) {
+                ROS_ERROR("Parameter error, please check the input parameters");
+                res.result = false;
+                return true;
+            }
+            unsigned short first_value, second_value, third_value, end_value;
+            sscanf(ntp_ip.c_str(), "%hu.%hu.%hu.%hu", &first_value, &second_value, &third_value, &end_value);
+            config_data[28] = first_value;
+            config_data[29] = second_value;
+            config_data[30] = third_value;
+            config_data[31] = end_value;
         } else {
             ROS_ERROR("Parameter error, please check the input parameters");
             res.result = false;
             return true;
         }
+
         printf("byte[45] %X \n", config_data[45]);
         res.result = true;
         sendPacketTolidar(config_data);
@@ -542,9 +558,9 @@ namespace lslidar_driver {
 
     bool LslidarDriver::motorControl(lslidar_msgs::motor_control::Request &req,
                                      lslidar_msgs::motor_control::Response &res) {
-        if(!is_get_difop_) {
+        if (!is_get_difop_) {
             res.result = 0;
-            ROS_ERROR( "Can not get dev packet! Set failed!");
+            ROS_ERROR("Can not get dev packet! Set failed!");
             return true;
         }
 
@@ -552,7 +568,7 @@ namespace lslidar_driver {
         mempcpy(config_data, difop_data, 1206);
         if (config_data[0] != 0xa5 || config_data[1] != 0xff || config_data[2] != 0x00 || config_data[3] != 0x5a) {
             res.result = 0;
-            ROS_ERROR( "Can not get dev packet! Set failed!");
+            ROS_ERROR("Can not get dev packet! Set failed!");
             return true;
         }
         setPacketHeader(config_data);
@@ -576,9 +592,9 @@ namespace lslidar_driver {
 
     bool LslidarDriver::motorSpeed(lslidar_msgs::motor_speed::Request &req,
                                    lslidar_msgs::motor_speed::Response &res) {
-        if(!is_get_difop_) {
+        if (!is_get_difop_) {
             res.result = 0;
-            ROS_ERROR( "Can not get dev packet! Set failed!");
+            ROS_ERROR("Can not get dev packet! Set failed!");
             return true;
         }
 
@@ -586,7 +602,7 @@ namespace lslidar_driver {
         mempcpy(config_data, difop_data, 1206);
         if (config_data[0] != 0xa5 || config_data[1] != 0xff || config_data[2] != 0x00 || config_data[3] != 0x5a) {
             res.result = 0;
-            ROS_ERROR( "Can not get dev packet! Set failed!");
+            ROS_ERROR("Can not get dev packet! Set failed!");
             return true;
         }
         setPacketHeader(config_data);
@@ -614,9 +630,9 @@ namespace lslidar_driver {
 
     bool LslidarDriver::setDataPort(lslidar_msgs::data_port::Request &req,
                                     lslidar_msgs::data_port::Response &res) {
-        if(!is_get_difop_) {
+        if (!is_get_difop_) {
             res.result = 0;
-            ROS_ERROR( "Can not get dev packet! Set failed!");
+            ROS_ERROR("Can not get dev packet! Set failed!");
             return true;
         }
 
@@ -624,7 +640,7 @@ namespace lslidar_driver {
         mempcpy(config_data, difop_data, 1206);
         if (config_data[0] != 0xa5 || config_data[1] != 0xff || config_data[2] != 0x00 || config_data[3] != 0x5a) {
             res.result = 0;
-            ROS_ERROR( "Can not get dev packet! Set failed!");
+            ROS_ERROR("Can not get dev packet! Set failed!");
             return true;
         }
         setPacketHeader(config_data);
@@ -646,9 +662,9 @@ namespace lslidar_driver {
 
     bool LslidarDriver::setDevPort(lslidar_msgs::dev_port::Request &req,
                                    lslidar_msgs::dev_port::Response &res) {
-        if(!is_get_difop_) {
+        if (!is_get_difop_) {
             res.result = 0;
-            ROS_ERROR( "Can not get dev packet! Set failed!");
+            ROS_ERROR("Can not get dev packet! Set failed!");
             return true;
         }
 
@@ -656,7 +672,7 @@ namespace lslidar_driver {
         mempcpy(config_data, difop_data, 1206);
         if (config_data[0] != 0xa5 || config_data[1] != 0xff || config_data[2] != 0x00 || config_data[3] != 0x5a) {
             res.result = 0;
-            ROS_ERROR( "Can not get dev packet! Set failed!");
+            ROS_ERROR("Can not get dev packet! Set failed!");
             return true;
         }
         setPacketHeader(config_data);
@@ -679,17 +695,17 @@ namespace lslidar_driver {
 
     bool LslidarDriver::setDataIp(lslidar_msgs::data_ip::Request &req,
                                   lslidar_msgs::data_ip::Response &res) {
-        std::regex ipv4("\\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b");
-        if(!regex_match(req.data_ip, ipv4))
-        {
+        std::regex ipv4(
+                "\\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b");
+        if (!regex_match(req.data_ip, ipv4)) {
             ROS_ERROR("Parameter error, please check the input parameters");
             res.result = false;
             return true;
         }
 
-        if(!is_get_difop_) {
+        if (!is_get_difop_) {
             res.result = 0;
-            ROS_ERROR( "Can not get dev packet! Set failed!");
+            ROS_ERROR("Can not get dev packet! Set failed!");
             return true;
         }
 
@@ -697,17 +713,17 @@ namespace lslidar_driver {
         mempcpy(config_data, difop_data, 1206);
         if (config_data[0] != 0xa5 || config_data[1] != 0xff || config_data[2] != 0x00 || config_data[3] != 0x5a) {
             res.result = 0;
-            ROS_ERROR( "Can not get dev packet! Set failed!");
+            ROS_ERROR("Can not get dev packet! Set failed!");
             return true;
         }
         setPacketHeader(config_data);
         is_get_difop_ = false;
 
-        unsigned short first_value,second_value,third_value,end_value;
+        unsigned short first_value, second_value, third_value, end_value;
         sscanf(req.data_ip.c_str(), "%hu.%hu.%hu.%hu", &first_value, &second_value, &third_value, &end_value);
 
         std::string destination_ip = std::to_string(config_data[14]) + "." + std::to_string(config_data[15]) + "." +
-                             std::to_string(config_data[16]) + "." + std::to_string(config_data[17]);
+                                     std::to_string(config_data[16]) + "." + std::to_string(config_data[17]);
         if (first_value == 0 || first_value == 127 ||
             (first_value >= 240 && first_value <= 255) || destination_ip == req.data_ip) {
             ROS_ERROR("Parameter error, please check the input parameters");
@@ -726,18 +742,18 @@ namespace lslidar_driver {
     }
 
     bool LslidarDriver::setDestinationIp(lslidar_msgs::destination_ip::Request &req,
-                                  lslidar_msgs::destination_ip::Response &res) {
-        std::regex ipv4("\\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b");
-        if(!regex_match(req.destination_ip, ipv4))
-        {
+                                         lslidar_msgs::destination_ip::Response &res) {
+        std::regex ipv4(
+                "\\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b");
+        if (!regex_match(req.destination_ip, ipv4)) {
             ROS_ERROR("Parameter error, please check the input parameters");
             res.result = false;
             return true;
         }
 
-        if(!is_get_difop_) {
+        if (!is_get_difop_) {
             res.result = 0;
-            ROS_ERROR( "Can not get dev packet! Set failed!");
+            ROS_ERROR("Can not get dev packet! Set failed!");
             return true;
         }
 
@@ -745,16 +761,16 @@ namespace lslidar_driver {
         mempcpy(config_data, difop_data, 1206);
         if (config_data[0] != 0xa5 || config_data[1] != 0xff || config_data[2] != 0x00 || config_data[3] != 0x5a) {
             res.result = 0;
-            ROS_ERROR( "Can not get dev packet! Set failed!");
+            ROS_ERROR("Can not get dev packet! Set failed!");
             return true;
         }
         setPacketHeader(config_data);
         is_get_difop_ = false;
-        unsigned short first_value,second_value,third_value,end_value;
+        unsigned short first_value, second_value, third_value, end_value;
         sscanf(req.destination_ip.c_str(), "%hu.%hu.%hu.%hu", &first_value, &second_value, &third_value, &end_value);
 
         std::string data_ip = std::to_string(config_data[10]) + "." + std::to_string(config_data[11]) + "." +
-                             std::to_string(config_data[12]) + "." + std::to_string(config_data[13]);
+                              std::to_string(config_data[12]) + "." + std::to_string(config_data[13]);
         if (first_value == 0 || first_value == 127 ||
             (first_value >= 240 && first_value <= 255) || data_ip == req.destination_ip) {
             ROS_ERROR("Parameter error, please check the input parameters");
@@ -844,7 +860,7 @@ namespace lslidar_driver {
         // packet timestamp
         if (use_gps_ts) {
             lslidar_msgs::LslidarPacket pkt = *packet;
-            if (0xff == pkt.data[1200]) {    //ptp授时
+            if (time_service_mode_ == 1) {    //ptp授时
                 //std::cout << "ptp";
                 uint64_t timestamp_s = (pkt.data[1201] * pow(2, 32) + pkt.data[1202] * pow(2, 24) +
                                         pkt.data[1203] * pow(2, 16) +
@@ -856,7 +872,7 @@ namespace lslidar_driver {
                 timeStamp = ros::Time(timestamp_s, timestamp_nsce);// s,ns
                 packet->stamp = timeStamp;
                 current_packet_time = timeStamp.toSec();
-            } else {          //gps授时
+            } else if (time_service_mode_ == 0) {          //gps授时
                 memset(&cur_time, 0, sizeof(cur_time));
                 cur_time.tm_year = pkt.data[1200] + 2000 - 1900;
                 cur_time.tm_mon = pkt.data[1201] - 1;
@@ -869,6 +885,22 @@ namespace lslidar_driver {
                                  pkt.data[1207] * pow(2, 8) +
                                  pkt.data[1208] * pow(2, 16) +
                                  pkt.data[1209] * pow(2, 24); //ns
+                timeStamp = ros::Time(packet_time_s, packet_time_ns);
+                packet->stamp = timeStamp;
+                current_packet_time = timeStamp.toSec();
+            } else if (time_service_mode_ == 2) {          //ntp授时
+                memset(&cur_time, 0, sizeof(cur_time));
+                cur_time.tm_year = pkt.data[1200] + 2000 - 1900;
+                cur_time.tm_mon = pkt.data[1201] - 1;
+                cur_time.tm_mday = pkt.data[1202];
+                cur_time.tm_hour = pkt.data[1203];
+                cur_time.tm_min = pkt.data[1204];
+                cur_time.tm_sec = pkt.data[1205];
+                packet_time_s = static_cast<uint64_t>(timegm(&cur_time)); //s
+                packet_time_ns = (pkt.data[1206] +
+                                 pkt.data[1207] * pow(2, 8) +
+                                 pkt.data[1208] * pow(2, 16) +
+                                 pkt.data[1209] * pow(2, 24)) * 1e3; //ns
                 timeStamp = ros::Time(packet_time_s, packet_time_ns);
                 packet->stamp = timeStamp;
                 current_packet_time = timeStamp.toSec();
@@ -1006,7 +1038,7 @@ namespace lslidar_driver {
             }
             sweep_end_time = sweep_end_time > 0 ? sweep_end_time : 0;
             {
-                std::unique_lock<std::mutex> lock(pointcloud_lock);
+                std::unique_lock <std::mutex> lock(pointcloud_lock);
                 sweep_data_bak = sweep_data;
             }
             std::thread pointcloud_pub_thread([this] { publishPointcloud(); });
@@ -1099,6 +1131,7 @@ namespace lslidar_driver {
                 new_point.distance = firings.distance[fir_idx];
             }
         }
+        last_packet_time = current_packet_time;
         //packet_pub.publish(*packet);
         return true;
     }

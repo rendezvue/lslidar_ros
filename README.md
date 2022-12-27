@@ -1,7 +1,7 @@
-# LSLIDAR_CX_V4.2.1_221219_ROS使用说明
+# LSLIDAR_CX_V4.2.1_221227_ROS使用说明
 
 ## 1.工程介绍
-​		LSLIDAR_CX_V4.2.1_221219_ROS为linux环境下雷达ros驱动，适用于C1,C8,C16,C32(32度，70度和90度)  4.0版本雷达，程序在ubuntu 20.04 ros noetic，ubuntu18.04 ros melodic以及ubuntu16.04 ros kinetic下测试通过。
+​		LSLIDAR_CX_V4.2.1_221227_ROS为linux环境下雷达ros驱动，适用于C1,C8,C16,C32(32度，70度和90度)  4.0版本雷达，程序在ubuntu 20.04 ros noetic，ubuntu18.04 ros melodic以及ubuntu16.04 ros kinetic下测试通过。
 
 ## 2.依赖
 
@@ -160,19 +160,22 @@ source devel/setup.bash
 GPS授时：
 
 ~~~bash
-rosservice call /time_service "time_service_mode: 'gps'"
+rosservice call /time_service "time_service_mode: 'gps'
+ntp_ip: ''" 
 ~~~
 
 PTP授时：
 
 ~~~bash
-rosservice call /time_service "time_service_mode: 'ptp'"
+rosservice call /time_service "time_service_mode: 'ptp'
+ntp_ip: ''" 
 ~~~
 
 NTP授时：
 
 ~~~bash
-rosservice call /time_service "time_service_mode: 'ntp'"
+rosservice call /time_service "time_service_mode: 'ntp'
+ntp_ip: '192.168.1.102'" 
 ~~~
 
 
@@ -303,7 +306,7 @@ Date    : 2022-10-28
 
 ------------------
 
-Original version : LSLIDAR_CX_V4.2.1_221219_ROS
+Original version : LSLIDAR_CX_V4.2.1_221227_ROS
 
 Modify:  1.scan话题新增强度信息
 
@@ -313,4 +316,6 @@ Modify:  1.scan话题新增强度信息
 
 4.新增雷达上下电,修改雷达ip，端口，转速等功能。
 
-Date    : 2022-12-19
+5.修复ntp授时解析问题。
+
+Date    : 2022-12-27

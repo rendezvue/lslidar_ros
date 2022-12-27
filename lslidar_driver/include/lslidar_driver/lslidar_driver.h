@@ -278,6 +278,7 @@ namespace lslidar_driver {
         double horizontal_angle_resolution;
         int lidar_number_ ;
         std::atomic<bool> is_get_difop_ {false};
+        std::atomic<int> time_service_mode_{0};
     };
 
     typedef PointXYZIRT VPoint;

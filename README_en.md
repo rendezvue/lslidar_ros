@@ -1,8 +1,8 @@
-# LSLIDAR_CX_V4.2.1_221219_ROS
+# LSLIDAR_CX_V4.2.1_221227_ROS
 
 ## 1.Introduction
 
-​		LSLIDAR_CX_V4.2.1_221219_ROS is the lidar ros driver in linux environment, which is suitable for C1,C8,C16 and C32(32 degrees,70 degrees,90 degrees)  lidar. The program has  tested under ubuntu 20.04 ros noetic , ubuntu18.04 ros melodic and ubuntu16.04 ros kinetic.
+​		LSLIDAR_CX_V4.2.1_221227_ROS is the lidar ros driver in linux environment, which is suitable for C1,C8,C16 and C32(32 degrees,70 degrees,90 degrees)  lidar. The program has  tested under ubuntu 20.04 ros noetic , ubuntu18.04 ros melodic and ubuntu16.04 ros kinetic.
 
 ## 2.Dependencies
 
@@ -174,19 +174,22 @@ source devel/setup.bash
 GPS：
 
 ~~~bash
-rosservice call /time_service "time_service_mode: 'gps'"
+rosservice call /time_service "time_service_mode: 'gps'
+ntp_ip: ''" 
 ~~~
 
 PTP：
 
 ~~~bash
-rosservice call /time_service "time_service_mode: 'ptp'"
+rosservice call /time_service "time_service_mode: 'ptp'
+ntp_ip: ''" 
 ~~~
 
 NTP：
 
 ~~~bash
-rosservice call /time_service "time_service_mode: 'ntp'"
+rosservice call /time_service "time_service_mode: 'ntp'
+ntp_ip: '192.168.1.102'" 
 ~~~
 
 
@@ -244,7 +247,7 @@ rosservice call /set_motor_speed "motor_speed: 20"
 source devel/setup.bash
 
 ~~~bash
-rosservice call /set_data_port "data_port: 2368"  #范围[1025,65535]
+rosservice call /set_data_port "data_port: 2368"  #range [1025,65535]
 ~~~
 
 **Note: After setting, you need to modify the launch file parameters and restart the driver.**
@@ -256,7 +259,7 @@ rosservice call /set_data_port "data_port: 2368"  #范围[1025,65535]
 source devel/setup.bash
 
 ~~~bash
-rosservice call /set_dev_port "dev_port: 2369"  #范围[1025,65535]
+rosservice call /set_dev_port "dev_port: 2369"  #range[1025,65535]
 ~~~
 
 **Note: After setting, you need to modify the launch file parameters and restart the driver.**
@@ -317,12 +320,13 @@ Date    : 2022-10-28
 
 -------------------
 
-Original version : LSLIDAR_CX_V4.2.1_221219_ROS
+Original version : LSLIDAR_CX_V4.2.1_221227_ROS
 
 Modify: 1. Scan topic adds strength information
 
 2. fpga upgrade, C32 90 degree modification of calculation formula
 3. ROS driver adds the function of modifying time service mode
 3. New function to modify lidar configuration
+3. Fixed the ntp timing resolution problem.
 
-Date    : 2022-12-19
+Date    : 2022-12-27
