@@ -141,7 +141,7 @@ namespace lslidar_driver {
         PCL_ADD_POINT4D;
         PCL_ADD_INTENSITY;
         std::uint16_t ring;
-        double time;
+        float time;
 
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW //make sure our new allocators are aligned
     }EIGEN_ALIGN16; //enforce SSE padding for correct memory alignment
@@ -208,38 +208,38 @@ namespace lslidar_driver {
         bool initialize();
 
     public:
-        int msop_udp_port;
-        int difop_udp_port;
-        int scan_num;
-        int point_num;
-        int angle_disable_min;
-        int angle_disable_max;
+        int msop_udp_port{};
+        int difop_udp_port{};
+        int scan_num{};
+        int point_num{};
+        int angle_disable_min{};
+        int angle_disable_max{};
         uint16_t last_azimuth;
-        uint64_t packet_time_s;
-        uint64_t packet_time_ns;
+        uint64_t packet_time_s{};
+        uint64_t packet_time_ns{};
         int return_mode;
 
-        in_addr lidar_ip;
+        in_addr lidar_ip{};
         std::string lidar_ip_string;
         std::string group_ip_string;
         std::string frame_id;
         std::string dump_file;
         std::string pointcloud_topic;
 
-        bool use_gps_ts;
-        bool pcl_type;
-        bool publish_scan;
-        bool coordinate_opt;
+        bool use_gps_ts{};
+        bool pcl_type{};
+        bool publish_scan{};
+        bool coordinate_opt{};
         bool is_first_sweep;
-        bool add_multicast;
+        bool add_multicast{};
         std::string c32_type;
-        double distance_unit;
-        double min_range;
-        double max_range;
+        double distance_unit{};
+        double min_range{};
+        double max_range{};
         double sweep_end_time;
-        double angle_base;
-        double cos_azimuth_table[36000];
-        double sin_azimuth_table[36000];
+        double angle_base{};
+        double cos_azimuth_table[36000]{};
+        double sin_azimuth_table[36000]{};
 
         boost::shared_ptr<Input> msop_input_;
         boost::shared_ptr<Input> difop_input_;
@@ -262,16 +262,16 @@ namespace lslidar_driver {
         ros::ServiceServer data_ip_service_;            //数据包ip
         ros::ServiceServer destination_ip_service_;     //设备包ip
 
-        unsigned char difop_data[1206];
-        unsigned char packetTimeStamp[10];
-        struct tm cur_time;
+        unsigned char difop_data[1206]{};
+        unsigned char packetTimeStamp[10]{};
+        struct tm cur_time{};
         ros::Time timeStamp;
         double packet_rate;
         double current_packet_time;
         double last_packet_time;
         double current_point_time;
         double last_point_time;
-        FiringCX firings;
+        FiringCX firings{};
         double scan_altitude[32] = {0};
         double cos_scan_altitude[32] = {0};
         double sin_scan_altitude[32] = {0};
@@ -279,6 +279,7 @@ namespace lslidar_driver {
         int lidar_number_ ;
         std::atomic<bool> is_get_difop_ {false};
         std::atomic<int> time_service_mode_{0};
+        bool start_process_msop_;
     };
 
     typedef PointXYZIRT VPoint;
@@ -292,6 +293,6 @@ POINT_CLOUD_REGISTER_POINT_STRUCT(lslidar_driver::PointXYZIRT,
                                           (float, z, z)
                                           (float, intensity, intensity)
                                           (std::uint16_t, ring, ring)
-                                          (double, time, time))
+                                          (float, time, time))
 
 #endif

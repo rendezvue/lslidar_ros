@@ -38,8 +38,9 @@ namespace lslidar_driver {
                                                                                        sweep_data(
                                                                                                new lslidar_msgs::LslidarScan()),
                                                                                        sweep_data_bak(
-                                                                                               new lslidar_msgs::LslidarScan()) {
-        return;
+                                                                                               new lslidar_msgs::LslidarScan()),
+                                                                                       start_process_msop_(false){
+        ROS_INFO("***********************ROS driver version: %s ***********************",lslidar_driver_VERSION);
     }
 
     bool LslidarDriver::checkPacketValidity(const lslidar_driver::RawPacket *packet) {
@@ -200,6 +201,7 @@ namespace lslidar_driver {
     void LslidarDriver::difopPoll() {
         // reading and publishing scans as fast as possible.
         lslidar_msgs::LslidarPacketPtr difop_packet_ptr(new lslidar_msgs::LslidarPacket);
+        static bool is_print_working_time = true;
         while (ros::ok()) {
             // keep reading
             int rc = difop_input_->getPacket(difop_packet_ptr);
@@ -213,10 +215,34 @@ namespace lslidar_driver {
                     difop_data[i] = difop_packet_ptr->data[i];
                 }
                 is_get_difop_ = true;
+                start_process_msop_ = true;
+                if (is_print_working_time) {
+                    int total_working_time = (difop_packet_ptr->data[105] << 24) + (difop_packet_ptr->data[106] << 16)
+                                             + (difop_packet_ptr->data[107] << 8) + difop_packet_ptr->data[108];
+                    int less_minus40_degree_working_time = (difop_packet_ptr->data[112] << 16)
+                                                           + (difop_packet_ptr->data[113] << 8) +
+                                                           difop_packet_ptr->data[114];
+                    int minus40_to_minus10_working_time = (difop_packet_ptr->data[115] << 16)
+                                                          + (difop_packet_ptr->data[116] << 8) +
+                                                          difop_packet_ptr->data[117];
+                    int minus10_to_30_working_time = (difop_packet_ptr->data[118] << 16)
+                                                     + (difop_packet_ptr->data[119] << 8) + difop_packet_ptr->data[120];
+                    int positive30_to_70_working_time = (difop_packet_ptr->data[121] << 16)
+                                                        + (difop_packet_ptr->data[122] << 8) + difop_packet_ptr->data[123];
+                    int positive70_to_100_working_time = (difop_packet_ptr->data[124] << 16)
+                                                         + (difop_packet_ptr->data[125] << 8) + difop_packet_ptr->data[126];
+                    ROS_INFO("total working time: %d hours:%d minutes", total_working_time / 60, total_working_time % 60);
+                    ROS_INFO("less than     -40 degrees  working time: %d hours:%d minutes", less_minus40_degree_working_time / 60, less_minus40_degree_working_time % 60);
+                    ROS_INFO("-40 degrees ~ -10 degrees  working time: %d hours:%d minutes", minus40_to_minus10_working_time / 60, minus40_to_minus10_working_time % 60);
+                    ROS_INFO("-10 degrees ~ 30  degrees  working time: %d hours:%d minutes", minus10_to_30_working_time / 60, minus10_to_30_working_time % 60);
+                    ROS_INFO("30  degrees ~ 70  degrees  working time: %d hours:%d minutes", positive30_to_70_working_time / 60, positive30_to_70_working_time % 60);
+                    ROS_INFO("70  degrees ~ 100 degrees  working time: %d hours:%d minutes", positive70_to_100_working_time / 60, positive70_to_100_working_time % 60);
+                    is_print_working_time = false;
+                }
             } else if (rc < 0) {
                 return;
             }
-            ros::spinOnce();
+            //ros::spinOnce();
         }
     }
 
@@ -280,13 +306,13 @@ namespace lslidar_driver {
 
     void LslidarDriver::publishPointcloud() {
         if (sweep_data_bak->points.size() < 65) return;
-        std::unique_lock <std::mutex> lock(pointcloud_lock);
+        std::unique_lock<std::mutex> lock(pointcloud_lock);
         if (pcl_type) {
-            pcl::PointCloud<pcl::PointXYZI>::Ptr point_cloud(new pcl::PointCloud <pcl::PointXYZI>);
+            pcl::PointCloud<pcl::PointXYZI>::Ptr point_cloud(new pcl::PointCloud<pcl::PointXYZI>);
             point_cloud->header.frame_id = frame_id;
             point_cloud->height = 1;
             point_cloud->header.stamp = static_cast<uint64_t>(sweep_end_time * 1e6);
-            pcl::PointCloud<pcl::PointXYZI>::Ptr point_cloud_scan(new pcl::PointCloud <pcl::PointXYZI>);
+            pcl::PointCloud<pcl::PointXYZI>::Ptr point_cloud_scan(new pcl::PointCloud<pcl::PointXYZI>);
             point_cloud_scan->header.frame_id = frame_id;
             point_cloud_scan->height = 1;
             point_cloud_scan->header.stamp = static_cast<uint64_t>(sweep_end_time * 1e6);
@@ -339,6 +365,7 @@ namespace lslidar_driver {
             size_t j;
             VPoint point;
             VPoint scan_point;
+            float first_point_time = sweep_data_bak->points[0].time;
             if (!sweep_data_bak->points.empty()) {
                 for (j = 0; j < sweep_data_bak->points.size(); ++j) {
                     if ((sweep_data_bak->points[j].azimuth > angle_disable_min) &&
@@ -359,10 +386,10 @@ namespace lslidar_driver {
                     point.z = sweep_data_bak->points[j].z;
                     point.intensity = sweep_data_bak->points[j].intensity;
                     point.ring = sweep_data_bak->points[j].ring;
-                    point.time = sweep_data_bak->points[j].time;
+                    point.time = sweep_data_bak->points[j].time - first_point_time;
                     point_cloud->points.push_back(point);
                     ++point_cloud->width;
-                    current_point_time = point.time;
+                    current_point_time = point.time ;
                     if (current_point_time - last_point_time < 0.0) {
                         //ROS_WARN("timestamp is rolled back! current point time: %.12f  last point time: %.12f", current_point_time, last_point_time);
                     }
@@ -857,9 +884,10 @@ namespace lslidar_driver {
             if (rc < 0) return false;
         }
 
+        if(!start_process_msop_) return false;
         // packet timestamp
+        lslidar_msgs::LslidarPacket pkt = *packet;
         if (use_gps_ts) {
-            lslidar_msgs::LslidarPacket pkt = *packet;
             if (time_service_mode_ == 1) {    //ptp授时
                 //std::cout << "ptp";
                 uint64_t timestamp_s = (pkt.data[1201] * pow(2, 32) + pkt.data[1202] * pow(2, 24) +
@@ -898,9 +926,9 @@ namespace lslidar_driver {
                 cur_time.tm_sec = pkt.data[1205];
                 packet_time_s = static_cast<uint64_t>(timegm(&cur_time)); //s
                 packet_time_ns = (pkt.data[1206] +
-                                 pkt.data[1207] * pow(2, 8) +
-                                 pkt.data[1208] * pow(2, 16) +
-                                 pkt.data[1209] * pow(2, 24)) * 1e3; //ns
+                                  pkt.data[1207] * pow(2, 8) +
+                                  pkt.data[1208] * pow(2, 16) +
+                                  pkt.data[1209] * pow(2, 24)) * 1e3; //ns
                 timeStamp = ros::Time(packet_time_s, packet_time_ns);
                 packet->stamp = timeStamp;
                 current_packet_time = timeStamp.toSec();
@@ -1038,7 +1066,7 @@ namespace lslidar_driver {
             }
             sweep_end_time = sweep_end_time > 0 ? sweep_end_time : 0;
             {
-                std::unique_lock <std::mutex> lock(pointcloud_lock);
+                std::unique_lock<std::mutex> lock(pointcloud_lock);
                 sweep_data_bak = sweep_data;
             }
             std::thread pointcloud_pub_thread([this] { publishPointcloud(); });

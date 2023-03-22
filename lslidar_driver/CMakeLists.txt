@@ -52,7 +52,7 @@ catkin_package(
 		DEPENDS
 		Boost
     )
-
+add_definitions("-D${PROJECT_NAME}_VERSION=\"${${PROJECT_NAME}_VERSION}\"")
 
 add_library(lslidar_input src/input.cc)
 target_link_libraries(lslidar_input

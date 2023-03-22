@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
 <package>
   <name>lslidar_driver</name>
-  <version>1.0.0</version>
+  <version>4.2.2</version>
 
   <maintainer email="lslidar@sina.com">lslidar</maintainer>
   <author>lslidar</author>
   <license>BSD</license>
   <description>
-    ROS device driver for Leishen C16 lidar.
+    ROS device driver for Leishen CX 4.0 lidar.
   </description>
 
   <buildtool_depend>catkin</buildtool_depend>

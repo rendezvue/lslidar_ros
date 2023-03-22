@@ -1,7 +1,7 @@
-# LSLIDAR_CX_V4.2.1_221227_ROS使用说明
+# LSLIDAR_CX_V4.2.2_230322_ROS使用说明
 
 ## 1.工程介绍
-​		LSLIDAR_CX_V4.2.1_221227_ROS为linux环境下雷达ros驱动，适用于C1,C8,C16,C32(32度，70度和90度)  4.0版本雷达，程序在ubuntu 20.04 ros noetic，ubuntu18.04 ros melodic以及ubuntu16.04 ros kinetic下测试通过。
+​		LSLIDAR_CX_V4.2.2_230322_ROS为linux环境下雷达ros驱动，适用于C1,C8,C16,C32(32度，70度和90度)  4.0版本雷达，程序在ubuntu 20.04 ros noetic，ubuntu18.04 ros melodic以及ubuntu16.04 ros kinetic下测试通过。
 
 ## 2.依赖
 
@@ -319,3 +319,26 @@ Modify:  1.scan话题新增强度信息
 5.修复ntp授时解析问题。
 
 Date    : 2022-12-27
+
+-----
+
+Original version : LSLIDAR_CX_V4.2.2_230322_ROS
+
+Modify:  1.增加使用时长提示
+
+2.新增驱动版本提示
+
+Date    : 2023-03-22
+
+
+
+
+
+
+
+
+
+
+
+
+

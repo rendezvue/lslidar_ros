@@ -1,8 +1,8 @@
-# LSLIDAR_CX_V4.2.1_221227_ROS
+# lslidar_ros_driver
 
 ## 1.Introduction
 
-​		LSLIDAR_CX_V4.2.1_221227_ROS is the lidar ros driver in linux environment, which is suitable for C1,C8,C16 and C32(32 degrees,70 degrees,90 degrees)  lidar. The program has  tested under ubuntu 20.04 ros noetic , ubuntu18.04 ros melodic and ubuntu16.04 ros kinetic.
+​		LSLIDAR_CX_V4.2.2_230322_ROS is the lidar ros driver in linux environment, which is suitable for C1,C8,C16 and C32(32 degrees,70 degrees,90 degrees)  lidar. The program has  tested under ubuntu 20.04 ros noetic , ubuntu18.04 ros melodic and ubuntu16.04 ros kinetic.
 
 ## 2.Dependencies
 
@@ -330,3 +330,13 @@ Modify: 1. Scan topic adds strength information
 3. Fixed the ntp timing resolution problem.
 
 Date    : 2022-12-27
+
+----------------------
+
+Original version : LSLIDAR_CX_V4.2.2_230322_ROS
+
+Modify:1.Prompt for usage duration
+
+2.Driver version prompt
+
+Date    : 2023-03-22
