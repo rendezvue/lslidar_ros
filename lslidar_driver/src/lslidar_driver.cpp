@@ -365,7 +365,7 @@ namespace lslidar_driver {
             size_t j;
             VPoint point;
             VPoint scan_point;
-            float first_point_time = sweep_data_bak->points[0].time;
+            double first_point_time = sweep_data_bak->points[0].time;
             if (!sweep_data_bak->points.empty()) {
                 for (j = 0; j < sweep_data_bak->points.size(); ++j) {
                     if ((sweep_data_bak->points[j].azimuth > angle_disable_min) &&
